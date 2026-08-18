@@ -853,11 +853,15 @@ function getConversionData(filter){
   for(let i=0; i<activeFunnel.length-1; i++){
     const curr = activeFunnel[i];
     const next = activeFunnel[i+1];
-    // Deals beyond stage i (only active stages)
+    // Deals beyond stage i (only active stages) — прошли дальше
     const beyond = activeFunnel.slice(i+1).reduce((a,s)=>a+s.count, 0);
-    const total = curr.count + beyond;
+    // Lost deals — Саратов + Отвал (во всём массиве, не только active)
+    const lost = funnel.filter(f => !f.active && f.id !== 'Проработка доп.контуров').reduce((a,s)=>a+s.count, 0);
+    // Total denominator = on stage now + passed beyond + lost
+    const total = curr.count + beyond + lost;
     const conv = total > 0 ? (beyond / total * 100) : 0;
     const stuckPct = total > 0 ? (curr.count / total * 100) : 0;
+    const lostPct = total > 0 ? (lost / total * 100) : 0;
     // Recent transitions using previousStage field
     let deals = State.deals;
     if(filter){
@@ -871,8 +875,11 @@ function getConversionData(filter){
       from: curr, to: next,
       conversion: conv,
       total: total,
+      beyond: beyond,
+      lost: lost,
       dropOff: curr.count,
       dropOffPct: stuckPct,
+      lostPct: lostPct,
       recentCount: leftStage.length,
       recentProgress: leftToProgress.length,
       recentLost: leftToLost.length,
@@ -1127,6 +1134,13 @@ function getConversionHints(){
         pct: c.dropOffPct,
       });
     }
+    if(c.lost > 0 && c.lostPct > 30){
+      hints.push({
+        text: `Со стадии «${c.from.short}» потеряно ${c.lost} сделок (${Math.round(c.lostPct)}% от всех достигших) — ушли в Саратов или Отвал.`,
+        action: `Проверьте причины оттока на стадии «${c.from.short}»`,
+        pct: c.lostPct,
+      });
+    }
     if(c.recentCount >= 2 && c.recentLostPct > 50){
       hints.push({
         text: `На стадии «${c.from.short}» → «${c.to.short}» за последнее время ${c.recentLost} из ${c.recentCount} сделок ушли в «Саратов» или «Отвал» (${Math.round(c.recentLostPct)}%).`,
@@ -1135,16 +1149,29 @@ function getConversionHints(){
       });
     }
   });
-  // Find biggest bottleneck (highest stuckPct among stages with 3+ deals)
-  const candidates = conv.filter(c => c.from.count >= 3);
+  // Find biggest bottleneck (highest lostPct among stages with 3+ total)
+  const candidates = conv.filter(c => c.total >= 3 && c.lost > 0);
   if(candidates.length){
-    const worst = candidates.reduce((a,b)=> a.dropOffPct > b.dropOffPct ? a : b);
+    const worst = candidates.reduce((a,b)=> a.lostPct > b.lostPct ? a : b);
     hints.unshift({
-      text: `Ключевой затык воронки: «${worst.from.short}» — ${Math.round(worst.dropOffPct)}% сделок застряли на этой стадии (${worst.dropOff} из ${worst.total}).`,
+      text: `Ключевая стадия потерь: «${worst.from.short}» — ${Math.round(worst.lostPct)}% сделок потеряно в Саратов/Отвал (${worst.lost} из ${worst.total}).`,
       action: 'Требуется анализ причин и корректирующие действия',
-      pct: worst.dropOffPct,
+      pct: worst.lostPct,
       isMain: true,
     });
+  }
+  // Find worst stuck stage
+  const stuckCandidates = conv.filter(c => c.from.count >= 3);
+  if(stuckCandidates.length){
+    const worstStuck = stuckCandidates.reduce((a,b)=> a.dropOffPct > b.dropOffPct ? a : b);
+    if(worstStuck.dropOffPct > 50){
+      hints.unshift({
+        text: `Ключевой затык воронки: «${worstStuck.from.short}» — ${Math.round(worstStuck.dropOffPct)}% сделок застряли на этой стадии (${worstStuck.dropOff} из ${worstStuck.total}).`,
+        action: 'Требуется анализ причин и корректирующие действия',
+        pct: worstStuck.dropOffPct,
+        isMain: true,
+      });
+    }
   }
   return hints;
 }
@@ -1475,28 +1502,30 @@ function renderFunnel(){
   document.getElementById('conversionTable').innerHTML = `
     <table>
       <thead>
-        <tr><th>Переход</th><th>На стадии</th><th>Прошли дальше</th><th>Конверсия (снапшот)</th><th>Недавно ушли</th><th>Из них прогресс</th><th>Из них отвал</th><th>Конверсия (недав.)</th></tr>
+        <tr><th>Переход</th><th>На стадии</th><th>Прошли дальше</th><th>Потеряно (Саратов+Отвал)</th><th>Всего</th><th>Конверсия (с учётом потерь)</th><th>% застряли</th><th>% потеряно</th><th>Недавно ушли</th><th>Из них отвал</th></tr>
       </thead>
       <tbody>
         ${conv.map(c=>{
           const cls = c.conversion >= 60 ? 'good' : c.conversion >= 30 ? 'mid' : 'bad';
-          const recentCls = c.recentCount > 0 ? (c.recentConv >= 60 ? 'good' : c.recentConv >= 30 ? 'mid' : 'bad') : 'mid';
+          const lostCls = c.lostPct >= 40 ? 'bad' : c.lostPct >= 20 ? 'mid' : 'good';
           return `
             <tr>
               <td>${c.from.short} &rarr; ${c.to.short}</td>
               <td>${c.dropOff}</td>
-              <td>${c.to.count}</td>
+              <td class="bold" style="color:var(--success)">${c.beyond}</td>
+              <td class="bold" style="color:var(--danger)">${c.lost}</td>
+              <td>${c.total}</td>
               <td><span class="funnel-conversion ${cls}">${fmtPct(c.conversion)}</span></td>
+              <td>${fmtPct(c.dropOffPct)}</td>
+              <td><span class="funnel-conversion ${lostCls}">${fmtPct(c.lostPct)}</span></td>
               <td>${c.recentCount}</td>
-              <td class="bold" style="color:var(--success)">${c.recentProgress}</td>
               <td class="bold" style="color:var(--danger)">${c.recentLost}</td>
-              <td>${c.recentCount > 0 ? `<span class="funnel-conversion ${recentCls}">${fmtPct(c.recentConv)}</span>` : '—'}</td>
             </tr>
           `;
         }).join('')}
       </tbody>
     </table>
-    <p class="small muted mt-12">Конверсия (снапшот) — доля сделок, прошедших стадию, от всех достигших её. Конверсия (недав.) — по полю «Предыдущая стадия»: сколько сделок недавно ушли со стадии и куда.</p>
+    <p class="small muted mt-12"><b>Конверсия (с учётом потерь)</b> = прошли дальше / (на стадии + прошли дальше + потеряно в Саратов/Отвал) × 100%. <b>% застряли</b> — всё ещё на этой стадии. <b>% потеряно</b> — доля сделок, ушедших в Саратов или Отвал, от всех достигших стадии.</p>
   `;
 
   // Stage tabs
