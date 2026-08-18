@@ -887,7 +887,7 @@ function getPaymentCalendar(){
   const deals = State.deals.filter(d => PAYMENT_STAGES.includes(d.stage) && d.amount > 0);
   return deals.map(d=>{
     const override = State.calendarOverrides[d.id] || {};
-    let prob = override.probability ?? State.stageProbs[d.stage] ?? PAYMENT_PROBS[d.stage] ?? 0;
+    let prob = override.prob ?? override.probability ?? State.stageProbs[d.stage] ?? PAYMENT_PROBS[d.stage] ?? 0;
     let amount = override.amount ?? d.amount;
     let paymentMonth = override.paymentMonth || autoCalcPaymentMonth(d);
     let note = override.note || '';
@@ -932,12 +932,13 @@ function getSourceAnalysis(){
   const deals = State.deals.filter(d => d.source);
   const groups = {};
   deals.forEach(d=>{
-    if(!groups[d.source]) groups[d.source] = { source:d.source, deals:[], count:0, sum:0, wonCount:0, wonSum:0, activeCount:0, activeSum:0 };
+    if(!groups[d.source]) groups[d.source] = { source:d.source, deals:[], count:0, sum:0, wonCount:0, wonSum:0, activeCount:0, activeSum:0, lostCount:0, lostSum:0 };
     const g = groups[d.source];
     g.deals.push(d); g.count++; g.sum += d.amount||0;
     const idx = STAGE_INDEX[d.stage];
-    if(idx >= 6){ g.wonCount++; g.wonSum += d.amount||0; } // Запуск и далее
-    else if(idx >= 0 && idx <= 6){ g.activeCount++; g.activeSum += d.amount||0; }
+    if(idx >= 6 && idx <= 8){ g.wonCount++; g.wonSum += d.amount||0; } // Запуск, Передача, Кейс
+    else if(idx >= 0 && idx <= 5){ g.activeCount++; g.activeSum += d.amount||0; } // Активные
+    else if(idx === 10 || idx === 11){ g.lostCount++; g.lostSum += d.amount||0; } // Саратов, Отвал
   });
   return Object.values(groups).sort((a,b)=>b.sum - a.sum);
 }
@@ -1588,7 +1589,7 @@ function renderCalendar(){
               <td>${d.category ? `<span class="tag tag-category">${d.category}</span>` : '—'}</td>
               <td><span class="tag tag-stage" style="background:${STAGES[getStageIndex(d.stage)]?.color||'#999'}">${STAGES[getStageIndex(d.stage)]?.short||d.stage}</span></td>
               <td class="right editable" onclick="editCell('${d.id}','amount',this)">${(d.amount||0).toLocaleString('ru-RU')}</td>
-              <td class="center editable" onclick="editCell('${d.id}','prob',this)">${d.prob}%</td>
+              <td class="center editable" onclick="editCell('${d.id}','prob',this)" style="font-weight:700;color:${d.prob>=50?'var(--success)':d.prob>=20?'var(--warning)':'var(--text-muted)'}">${d.prob}%</td>
               <td class="center editable" onclick="editCell('${d.id}','paymentMonth',this)">${d.paymentMonth ? formatMonth(d.paymentMonth) : '—'}</td>
               <td class="right bold">${Math.round(weighted).toLocaleString('ru-RU')}</td>
               <td class="editable" onclick="editCell('${d.id}','note',this)">${d.note || '<span class="muted">+ добавить</span>'}</td>
@@ -1611,27 +1612,106 @@ function renderCalendar(){
   `;
   document.getElementById('calTable').innerHTML = html;
 
-  // Monthly forecast chart
+  // Monthly forecast chart - stacked bars showing each deal
   const forecast = getMonthlyForecast();
   const months6 = getMonthsRange(6);
   const maxVal = Math.max(...months6.map(m=>forecast[m]?.weighted||0), 1);
-  let fhtml = '<div class="month-bar">';
-  months6.forEach(m=>{
-    const w = forecast[m]?.weighted || 0;
-    const u = forecast[m]?.unweighted || 0;
-    const h = w / maxVal * 100;
+  const DEAL_COLORS = ['#3b82f6','#10b981','#f59e0b','#8b5cf6','#ef4444','#06b6d4','#ec4899','#84cc16','#f97316','#6366f1','#14b8a6','#a855f7'];
+  let fhtml = '<div style="display:flex;align-items:flex-end;gap:4px;height:260px;padding:0 4px;border-bottom:1px solid var(--border);margin-bottom:8px">';
+  months6.forEach((m,mi)=>{
+    const mData = forecast[m];
+    const w = mData?.weighted || 0;
+    const h = w / maxVal * 240;
+    let dealSegments = '';
+    if(mData && mData.deals.length){
+      mData.deals.forEach((d,di)=>{
+        const dealWeighted = d.amount * d.prob / 100;
+        const segH = dealWeighted / maxVal * 240;
+        const color = DEAL_COLORS[di % DEAL_COLORS.length];
+        const dealLabel = `${d.client || d.title} | ${d.category||'—'} | ${d.prob}% | ${fmtRubFull(dealWeighted)}`;
+        dealSegments += `<div style="width:100%;height:${segH}px;background:${color};border-top:1px solid rgba(255,255,255,.3);position:relative" title="${dealLabel}"></div>`;
+      });
+    }
     fhtml += `
-      <div class="month-col">
-        <div class="small bold">${w > 0 ? fmtRub(w) : ''}</div>
-        <div class="month-bar-fill" style="height:${h}%;background:var(--primary)" title="${formatMonth(m)}: взвеш. ${fmtRubFull(w)}, невзвеш. ${fmtRubFull(u)}, ${forecast[m]?.count||0} сделок"></div>
-        <div class="month-label">${formatMonth(m)}</div>
-        <div class="small muted">${forecast[m]?.count||0} сдел.</div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;cursor:default" 
+           onmouseenter="showMonthDetail('${m}')" onmouseleave="hideMonthDetail()">
+        <div style="font-size:11px;font-weight:700;margin-bottom:2px;color:var(--primary)">${w > 0 ? fmtRub(w) : ''}</div>
+        <div style="width:100%;height:240px;display:flex;flex-direction:column-reverse;border-radius:4px 4px 0 0;overflow:hidden;position:relative">
+          ${h > 0 ? dealSegments : '<div style="width:100%;height:2px;background:var(--border)"></div>'}
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);text-align:center;line-height:1.2;margin-top:4px">${formatMonth(m)}</div>
+        <div style="font-size:10px;color:var(--text-muted)">${mData?.count||0} сдел.</div>
       </div>
     `;
   });
   fhtml += '</div>';
-  fhtml += '<div class="flex gap-12 mt-12 flex-wrap"><span class="pill blue">Взвешенный прогноз</span><span class="pill gray">Невзвешенная сумма</span></div>';
+  
+  // Month detail panel
+  fhtml += '<div id="monthDetail" style="min-height:80px;padding:12px;border-radius:8px;background:var(--bg);margin-top:12px;display:none"></div>';
+  
+  // Legend
+  fhtml += '<div class="flex gap-12 mt-12 flex-wrap"><span class="pill blue">Взвешенный прогноз (сумма × %)</span><span class="pill gray">Наведите курсор на столбец для деталей</span></div>';
+  
+  // Deal legend for all visible months
+  fhtml += '<div class="mt-12"><details><summary style="font-size:12px;font-weight:600;cursor:pointer;color:var(--primary)">Показать всех клиентов по месяцам</summary><div class="mt-12">';
+  months6.forEach(m=>{
+    const mData = forecast[m];
+    if(!mData || !mData.deals.length) return;
+    fhtml += `<div class="mb-12"><div class="bold small" style="margin-bottom:4px">${formatMonth(m)} — ${fmtRub(mData.weighted)} (${mData.count} сделок)</div>`;
+    fhtml += '<table style="font-size:12px"><thead><tr><th>Клиент</th><th>Категория</th><th>Сумма</th><th>Вер.%</th><th>Взвеш., ₽</th></tr></thead><tbody>';
+    mData.deals.forEach((d,di)=>{
+      const dealWeighted = d.amount * d.prob / 100;
+      const color = DEAL_COLORS[di % DEAL_COLORS.length];
+      fhtml += `<tr>
+        <td><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${color};margin-right:6px"></span>${d.client || d.title}</td>
+        <td>${d.category || '—'}</td>
+        <td class="right">${fmtRubFull(d.amount)}</td>
+        <td class="center bold">${d.prob}%</td>
+        <td class="right bold">${fmtRubFull(dealWeighted)}</td>
+      </tr>`;
+    }).join('');
+    fhtml += '</tbody></table></div>';
+  });
+  fhtml += '</div></details></div>';
+  
   document.getElementById('calForecast').innerHTML = fhtml;
+}
+
+function showMonthDetail(month){
+  const forecast = getMonthlyForecast();
+  const mData = forecast[month];
+  const panel = document.getElementById('monthDetail');
+  if(!panel) return;
+  if(!mData || !mData.deals.length){
+    panel.style.display = '';
+    panel.innerHTML = `<div class="bold small mb-12">${formatMonth(month)}</div><p class="muted small">Нет сделок в этом месяце</p>`;
+    return;
+  }
+  const DEAL_COLORS = ['#3b82f6','#10b981','#f59e0b','#8b5cf6','#ef4444','#06b6d4','#ec4899','#84cc16','#f97316','#6366f1','#14b8a6','#a855f7'];
+  let html = `<div class="bold small mb-12">${formatMonth(month)} — взвешенный прогноз: ${fmtRubFull(mData.weighted)} | невзвешенная сумма: ${fmtRubFull(mData.unweighted)} | ${mData.count} сделок</div>`;
+  html += '<table style="font-size:12px;width:100%"><thead><tr><th></th><th>Клиент</th><th>Категория</th><th>Стадия</th><th>Сумма</th><th>Вер.%</th><th>Взвеш., ₽</th></tr></thead><tbody>';
+  mData.deals.forEach((d,di)=>{
+    const dealWeighted = d.amount * d.prob / 100;
+    const color = DEAL_COLORS[di % DEAL_COLORS.length];
+    const stageInfo = STAGES.find(s=>s.id===d.stage);
+    html += `<tr>
+      <td><span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:${color}"></span></td>
+      <td class="bold">${d.client || d.title}</td>
+      <td>${d.category || '—'}</td>
+      <td>${stageInfo ? stageInfo.short : d.stage}</td>
+      <td class="right">${fmtRubFull(d.amount)}</td>
+      <td class="center bold" style="color:${d.prob>=50?'var(--success)':d.prob>=20?'var(--warning)':'var(--text-muted)'}">${d.prob}%</td>
+      <td class="right bold">${fmtRubFull(dealWeighted)}</td>
+    </tr>`;
+  }).join('');
+  html += '</tbody></table>';
+  panel.style.display = '';
+  panel.innerHTML = html;
+}
+
+function hideMonthDetail(){
+  const panel = document.getElementById('monthDetail');
+  if(panel) panel.style.display = 'none';
 }
 
 function editCell(dealId, field, cell){
@@ -1639,7 +1719,9 @@ function editCell(dealId, field, cell){
   const deal = cal.find(d=>d.id === dealId);
   if(!deal) return;
   const override = State.calendarOverrides[dealId] || {};
-  const current = override[field] ?? deal[field];
+  let current;
+  if(field === 'prob') current = override.prob ?? override.probability ?? deal.prob;
+  else current = override[field] ?? deal[field];
 
   cell.classList.add('editing');
   let input;
@@ -1856,7 +1938,7 @@ function renderSources(){
   document.getElementById('sourceTable').innerHTML = `
     <table>
       <thead>
-        <tr><th>Источник</th><th>Всего сделок</th><th>Сумма, ₽</th><th>Средний чек</th><th>Активных</th><th>Выиграно</th><th>Конверсия в выигрыш</th></tr>
+        <tr><th>Источник</th><th>Всего сделок</th><th>Сумма, ₽</th><th>Средний чек</th><th>Активных</th><th>Запущено (Оплачено)</th><th>Свал (Саратов/Отвал)</th><th>Конверсия в запуск</th></tr>
       </thead>
       <tbody>
         ${sources.map(s=>{
@@ -1869,6 +1951,7 @@ function renderSources(){
               <td class="right">${fmtRub(s.count > 0 ? s.sum / s.count : 0)}</td>
               <td>${s.activeCount}</td>
               <td>${s.wonCount} (${fmtRub(s.wonSum)})</td>
+              <td>${s.lostCount > 0 ? `<span style="color:var(--danger)">${s.lostCount}</span>` : '0'}</td>
               <td><span class="funnel-conversion ${wonPct>=30?'good':wonPct>=10?'mid':'bad'}">${wonPct}%</span></td>
             </tr>
           `;
