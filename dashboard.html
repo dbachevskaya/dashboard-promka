@@ -1439,14 +1439,19 @@ function renderDashboard(){
 let funnelActiveStage = null;
 
 function renderFunnel(){
-  // Filters
+  // Filters — preserve current selections
   const managers = getManagers();
   const sources = getSources();
   const mgrSelect = document.getElementById('funnelManager');
   const srcSelect = document.getElementById('funnelSource');
-  mgrSelect.innerHTML = '<option value="all">Все менеджеры</option>' + managers.map(m=>`<option value="${m}">${m}</option>`).join('');
-  srcSelect.innerHTML = '<option value="all">Все источники</option>' + sources.map(s=>`<option value="${s}">${s}</option>`).join('');
-  const filter = { manager: mgrSelect.value || 'all', source: srcSelect.value || 'all' };
+  const prevMgr = mgrSelect.value || 'all';
+  const prevSrc = srcSelect.value || 'all';
+  mgrSelect.innerHTML = '<option value="all">Все менеджеры</option>' + managers.map(m=>'<option value="' + m + '">' + m + '</option>').join('');
+  srcSelect.innerHTML = '<option value="all">Все источники</option>' + sources.map(s=>'<option value="' + s + '">' + s + '</option>').join('');
+  // Restore selection if still valid
+  mgrSelect.value = managers.includes(prevMgr) ? prevMgr : 'all';
+  srcSelect.value = sources.includes(prevSrc) ? prevSrc : 'all';
+  const filter = { manager: mgrSelect.value, source: srcSelect.value };
 
   // Funnel chart
   const funnel = getFunnelData(State.deals, filter);
