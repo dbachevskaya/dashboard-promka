@@ -1613,10 +1613,10 @@ function renderCalendar(){
   document.getElementById('calTable').innerHTML = html;
 
   // Monthly forecast chart - stacked bars showing each deal
+  // Color by probability: 10% = blue, 50% = yellow/amber, 100% = green
   const forecast = getMonthlyForecast();
   const months6 = getMonthsRange(6);
   const maxVal = Math.max(...months6.map(m=>forecast[m]?.weighted||0), 1);
-  const DEAL_COLORS = ['#3b82f6','#10b981','#f59e0b','#8b5cf6','#ef4444','#06b6d4','#ec4899','#84cc16','#f97316','#6366f1','#14b8a6','#a855f7'];
   let fhtml = '<div style="display:flex;align-items:flex-end;gap:4px;height:260px;padding:0 4px;border-bottom:1px solid var(--border);margin-bottom:8px">';
   months6.forEach((m)=>{
     const mData = forecast[m];
@@ -1624,11 +1624,11 @@ function renderCalendar(){
     const totalH = w / maxVal * 240;
     let dealSegments = '';
     if(mData && mData.deals.length){
-      mData.deals.forEach((d,di)=>{
+      mData.deals.forEach((d)=>{
         const dealWeighted = d.amount * d.prob / 100;
         const segH = Math.max(dealWeighted / maxVal * 240, 1);
-        const color = DEAL_COLORS[di % DEAL_COLORS.length];
-        dealSegments += '<div style="width:100%;height:' + segH + 'px;background:' + color + ';border-top:1px solid rgba(255,255,255,.3)"></div>';
+        const color = probColor(d.prob);
+        dealSegments += '<div style="width:100%;height:' + segH + 'px;background:' + color + ';border-top:1px solid rgba(255,255,255,.4)"></div>';
       });
     }
     fhtml += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;cursor:default" '
@@ -1646,8 +1646,14 @@ function renderCalendar(){
   // Month detail panel
   fhtml += '<div id="monthDetail" style="min-height:60px;padding:12px;border-radius:8px;background:var(--bg);margin-top:12px;display:none"></div>';
   
-  // Legend
-  fhtml += '<div class="flex gap-12 mt-12 flex-wrap"><span class="pill blue">Взвешенный прогноз (сумма × %)</span><span class="pill gray">Наведите курсор на столбец для деталей</span></div>';
+  // Legend with probability gradient
+  fhtml += '<div class="mt-12" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">'
+    + '<span class="small bold">Вероятность:</span>'
+    + '<span class="flex gap-4"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#3b82f6"></span><span class="small">10% (КП подготовка)</span></span>'
+    + '<span class="flex gap-4"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#f59e0b"></span><span class="small">50% (КП на согласовании / Договор)</span></span>'
+    + '<span class="flex gap-4"><span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:#10b981"></span><span class="small">100% (оплачено)</span></span>'
+    + '<span class="pill gray">Наведите курсор на столбец для деталей</span>'
+    + '</div>';
   
   // Deal legend for all visible months
   fhtml += '<div class="mt-12"><details><summary style="font-size:12px;font-weight:600;cursor:pointer;color:var(--primary)">Показать всех клиентов по месяцам</summary><div class="mt-12">';
@@ -1656,15 +1662,15 @@ function renderCalendar(){
     if(!mData || !mData.deals.length) return;
     fhtml += '<div class="mb-12"><div class="bold small" style="margin-bottom:4px">' + formatMonth(m) + ' — ' + fmtRub(mData.weighted) + ' (' + mData.count + ' сделок)</div>';
     fhtml += '<table style="font-size:12px"><thead><tr><th>Клиент</th><th>Категория</th><th>Сумма</th><th>Вер.%</th><th>Взвеш., ₽</th></tr></thead><tbody>';
-    mData.deals.forEach((d,di)=>{
+    mData.deals.forEach((d)=>{
       const dealWeighted = d.amount * d.prob / 100;
-      const color = DEAL_COLORS[di % DEAL_COLORS.length];
+      const color = probColor(d.prob);
       const safeClient = (d.client || d.title || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
       fhtml += '<tr>'
         + '<td><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:' + color + ';margin-right:6px"></span>' + safeClient + '</td>'
         + '<td>' + (d.category || '—') + '</td>'
         + '<td class="right">' + fmtRubFull(d.amount) + '</td>'
-        + '<td class="center bold">' + d.prob + '%</td>'
+        + '<td class="center bold" style="color:' + probTextColor(d.prob) + '">' + d.prob + '%</td>'
         + '<td class="right bold">' + fmtRubFull(dealWeighted) + '</td>'
         + '</tr>';
     });
@@ -1685,28 +1691,41 @@ function showMonthDetail(month){
     panel.innerHTML = '<div class="bold small mb-12">' + formatMonth(month) + '</div><p class="muted small">Нет сделок в этом месяце</p>';
     return;
   }
-  const DEAL_COLORS = ['#3b82f6','#10b981','#f59e0b','#8b5cf6','#ef4444','#06b6d4','#ec4899','#84cc16','#f97316','#6366f1','#14b8a6','#a855f7'];
   let html = '<div class="bold small mb-12">' + formatMonth(month) + ' — взвешенный прогноз: ' + fmtRubFull(mData.weighted) + ' | невзвешенная сумма: ' + fmtRubFull(mData.unweighted) + ' | ' + mData.count + ' сделок</div>';
   html += '<table style="font-size:12px;width:100%"><thead><tr><th></th><th>Клиент</th><th>Категория</th><th>Стадия</th><th>Сумма</th><th>Вер.%</th><th>Взвеш., ₽</th></tr></thead><tbody>';
-  mData.deals.forEach((d,di)=>{
+  mData.deals.forEach((d)=>{
     const dealWeighted = d.amount * d.prob / 100;
-    const color = DEAL_COLORS[di % DEAL_COLORS.length];
+    const color = probColor(d.prob);
     const stageInfo = STAGES.find(s=>s.id===d.stage);
     const safeClient = (d.client || d.title || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    const probColor = d.prob>=50?'var(--success)':d.prob>=20?'var(--warning)':'var(--text-muted)';
     html += '<tr>'
       + '<td><span style="display:inline-block;width:12px;height:12px;border-radius:2px;background:' + color + '"></span></td>'
       + '<td class="bold">' + safeClient + '</td>'
       + '<td>' + (d.category || '—') + '</td>'
       + '<td>' + (stageInfo ? stageInfo.short : d.stage) + '</td>'
       + '<td class="right">' + fmtRubFull(d.amount) + '</td>'
-      + '<td class="center bold" style="color:' + probColor + '">' + d.prob + '%</td>'
+      + '<td class="center bold" style="color:' + probTextColor(d.prob) + '">' + d.prob + '%</td>'
       + '<td class="right bold">' + fmtRubFull(dealWeighted) + '</td>'
       + '</tr>';
   });
   html += '</tbody></table>';
   panel.style.display = '';
   panel.innerHTML = html;
+}
+
+function probColor(prob){
+  if(prob >= 90) return '#10b981';
+  if(prob >= 70) return '#34d399';
+  if(prob >= 50) return '#f59e0b';
+  if(prob >= 30) return '#fbbf24';
+  if(prob >= 10) return '#3b82f6';
+  return '#93c5fd';
+}
+
+function probTextColor(prob){
+  if(prob >= 50) return 'var(--success)';
+  if(prob >= 20) return 'var(--warning)';
+  return 'var(--text-muted)';
 }
 
 function hideMonthDetail(){
