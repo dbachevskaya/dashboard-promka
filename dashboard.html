@@ -1,0 +1,2615 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Дашборд — Воронка продаж | Промышленная маркировка</title>
+<style>
+:root{
+  --bg:#f1f5f9; --bg-card:#fff; --bg-sidebar:#1e293b; --bg-sidebar-hover:#334155;
+  --text:#1e293b; --text-muted:#64748b; --text-light:#cbd5e1; --text-on-dark:#e2e8f0;
+  --border:#e2e8f0; --border-dark:#475569;
+  --primary:#3b82f6; --primary-light:#dbeafe;
+  --success:#10b981; --success-light:#d1fae5;
+  --warning:#f59e0b; --warning-light:#fef3c7;
+  --danger:#ef4444; --danger-light:#fee2e2;
+  --purple:#8b5cf6; --purple-light:#ede9fe;
+  --radius:12px; --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.06);
+  --shadow-lg:0 10px 15px -3px rgba(0,0,0,.1),0 4px 6px -2px rgba(0,0,0,.05);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+.app{display:flex;min-height:100vh}
+
+/* Sidebar */
+.sidebar{width:240px;background:var(--bg-sidebar);color:var(--text-on-dark);display:flex;flex-direction:column;position:fixed;height:100vh;overflow-y:auto;z-index:100;flex-shrink:0}
+.sidebar-logo{padding:20px 20px 16px;font-size:15px;font-weight:700;border-bottom:1px solid var(--border-dark);line-height:1.3}
+.sidebar-logo span{color:var(--primary)}
+.sidebar-nav{padding:12px 0;flex:1}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;cursor:pointer;color:var(--text-light);font-size:13px;transition:.15s;border-left:3px solid transparent}
+.nav-item:hover{background:var(--bg-sidebar-hover);color:#fff}
+.nav-item.active{background:var(--bg-sidebar-hover);color:#fff;border-left-color:var(--primary)}
+.nav-icon{width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.sidebar-footer{padding:16px 20px;border-top:1px solid var(--border-dark);font-size:11px;color:var(--text-muted)}
+.sidebar-footer .status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+
+/* Main */
+.main{flex:1;margin-left:240px;display:flex;flex-direction:column;min-height:100vh}
+.topbar{background:var(--bg-card);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.topbar-title{font-size:18px;font-weight:700}
+.topbar-actions{display:flex;gap:10px;align-items:center}
+.topbar-info{font-size:12px;color:var(--text-muted);margin-right:12px}
+.content{padding:24px;flex:1}
+.view{display:none}
+.view.active{display:block}
+
+/* Cards */
+.card{background:var(--bg-card);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;margin-bottom:20px}
+.card-title{font-size:15px;font-weight:600;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between}
+.card-title .badge{font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;background:var(--primary-light);color:var(--primary)}
+
+/* KPI Grid */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:20px}
+.kpi-card{background:var(--bg-card);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px 20px;border-left:4px solid var(--primary)}
+.kpi-card.success{border-left-color:var(--success)}
+.kpi-card.warning{border-left-color:var(--warning)}
+.kpi-card.danger{border-left-color:var(--danger)}
+.kpi-card.purple{border-left-color:var(--purple)}
+.kpi-label{font-size:12px;color:var(--text-muted);font-weight:500;margin-bottom:6px}
+.kpi-value{font-size:24px;font-weight:700;letter-spacing:-.5px}
+.kpi-sub{font-size:12px;color:var(--text-muted);margin-top:4px}
+.kpi-trend{font-size:12px;font-weight:600;margin-top:4px;display:inline-flex;align-items:center;gap:4px}
+.kpi-trend.up{color:var(--success)}
+.kpi-trend.down{color:var(--danger)}
+.kpi-trend.neutral{color:var(--text-muted)}
+
+/* Funnel */
+.funnel{display:flex;flex-direction:column;gap:6px}
+.funnel-row{display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:8px;transition:.15s;cursor:default}
+.funnel-row:hover{background:var(--bg)}
+.funnel-bar-wrap{flex:1;height:36px;position:relative;background:var(--bg);border-radius:6px;overflow:hidden}
+.funnel-bar{height:100%;border-radius:6px;display:flex;align-items:center;padding:0 12px;color:#fff;font-weight:600;font-size:13px;transition:width .5s ease;min-width:2px}
+.funnel-meta{display:flex;flex-direction:column;align-items:flex-end;min-width:160px;font-size:12px}
+.funnel-meta .count{font-weight:700;font-size:14px;color:var(--text)}
+.funnel-meta .sum{color:var(--text-muted)}
+.funnel-stage-name{min-width:170px;font-size:13px;font-weight:600}
+.funnel-conversion{font-size:11px;padding:2px 8px;border-radius:4px;font-weight:600;margin-left:8px}
+.funnel-conversion.good{background:var(--success-light);color:var(--success)}
+.funnel-conversion.mid{background:var(--warning-light);color:var(--warning)}
+.funnel-conversion.bad{background:var(--danger-light);color:var(--danger)}
+
+/* Tables */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:10px 12px;font-weight:600;color:var(--text-muted);border-bottom:2px solid var(--border);white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid var(--border)}
+tr:hover{background:var(--bg)}
+.table-wrap{overflow-x:auto}
+.tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
+.tag-source{background:var(--purple-light);color:var(--purple)}
+.tag-stage{color:#fff}
+.tag-category{background:var(--bg);color:var(--text-muted);border:1px solid var(--border)}
+
+/* Progress */
+.progress-bar{height:8px;background:var(--bg);border-radius:4px;overflow:hidden}
+.progress-fill{height:100%;border-radius:4px;transition:width .5s ease}
+.progress-label{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;color:var(--text-muted)}
+
+/* Alerts */
+.alert{display:flex;gap:12px;padding:12px 16px;border-radius:8px;margin-bottom:8px;align-items:flex-start}
+.alert-icon{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.alert-body{flex:1}
+.alert-title{font-weight:600;font-size:13px;margin-bottom:2px}
+.alert-text{font-size:12px;color:var(--text-muted)}
+.alert.danger{background:var(--danger-light)}
+.alert.danger .alert-icon{background:var(--danger);color:#fff}
+.alert.warning{background:var(--warning-light)}
+.alert.warning .alert-icon{background:var(--warning);color:#fff}
+.alert.info{background:var(--primary-light)}
+.alert.info .alert-icon{background:var(--primary);color:#fff}
+.alert.success{background:var(--success-light)}
+.alert.success .alert-icon{background:var(--success);color:#fff}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;text-decoration:none}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:#2563eb}
+.btn-secondary{background:var(--bg);color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover{background:var(--border)}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-danger:hover{background:#dc2626}
+.btn-sm{padding:4px 10px;font-size:12px}
+.btn-icon{padding:6px 8px}
+
+/* Inputs */
+input,select{font-family:inherit;font-size:13px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;outline:none;transition:.15s}
+input:focus,select:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-light)}
+input[type="file"]{display:none}
+.input-money{width:130px;text-align:right}
+.input-month{width:160px}
+.input-percent{width:70px}
+.input-date{width:140px}
+
+/* Editable cells */
+.editable{cursor:pointer;padding:4px 8px;border-radius:4px;border:1px solid transparent;transition:.15s}
+.editable:hover{border-color:var(--border);background:var(--bg)}
+.editing{padding:0;border:1px solid var(--primary);border-radius:4px}
+
+/* Summary box */
+.summary-box{background:linear-gradient(135deg,#1e293b,#334155);color:#e2e8f0;border-radius:var(--radius);padding:20px 24px;margin-bottom:20px}
+.summary-box-title{font-size:12px;color:var(--text-light);margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.summary-box-text{font-size:14px;line-height:1.7}
+.summary-box-text strong{color:#fff}
+
+/* Grid */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+@media(max-width:900px){.grid-2,.grid-3{grid-template-columns:1fr}}
+
+/* SVG charts */
+.chart-bar{display:flex;flex-direction:column;gap:10px}
+.bar-row{display:flex;align-items:center;gap:10px}
+.bar-label{min-width:120px;font-size:12px;font-weight:500;text-align:right}
+.bar-track{flex:1;height:24px;background:var(--bg);border-radius:4px;overflow:hidden;position:relative}
+.bar-fill{height:100%;border-radius:4px;transition:width .5s ease;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;color:#fff;font-size:11px;font-weight:600;min-width:2px}
+.bar-value{min-width:100px;font-size:12px;font-weight:600}
+
+/* Empty state */
+.empty-state{text-align:center;padding:60px 20px;color:var(--text-muted)}
+.empty-state h3{font-size:18px;margin-bottom:8px;color:var(--text)}
+.empty-state p{margin-bottom:16px}
+
+/* Upload zone */
+.upload-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:40px;text-align:center;cursor:pointer;transition:.15s;background:var(--bg-card)}
+.upload-zone:hover{border-color:var(--primary);background:var(--primary-light)}
+.upload-zone.dragover{border-color:var(--primary);background:var(--primary-light)}
+
+/* Change list */
+.change-item{display:flex;gap:10px;padding:10px 14px;border-radius:8px;margin-bottom:6px;font-size:13px;align-items:center}
+.change-item.up{background:var(--success-light);border-left:3px solid var(--success)}
+.change-item.down{background:var(--danger-light);border-left:3px solid var(--danger)}
+.change-item.new{background:var(--primary-light);border-left:3px solid var(--primary)}
+.change-item.lost{background:var(--bg);border-left:3px solid var(--text-muted)}
+.change-item.sum{background:var(--warning-light);border-left:3px solid var(--warning)}
+.change-arrow{font-size:16px;font-weight:700}
+.change-stage{font-size:11px;padding:2px 6px;border-radius:4px;font-weight:600}
+
+/* Month forecast bars */
+.month-bar{display:flex;align-items:flex-end;gap:4px;height:200px;padding:0 4px}
+.month-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:default}
+.month-bar-fill{width:100%;border-radius:4px 4px 0 0;transition:height .5s ease;min-height:2px;position:relative}
+.month-bar-fill:hover{opacity:.85}
+.month-label{font-size:11px;color:var(--text-muted);text-align:center;line-height:1.2}
+.month-value{font-size:11px;font-weight:700}
+
+/* Tabs inside views */
+.sub-tabs{display:flex;gap:4px;margin-bottom:16px;border-bottom:2px solid var(--border)}
+.sub-tab{padding:8px 16px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:.15s}
+.sub-tab:hover{color:var(--text)}
+.sub-tab.active{color:var(--primary);border-bottom-color:var(--primary)}
+
+/* Misc */
+.muted{color:var(--text-muted)}
+.small{font-size:12px}
+.bold{font-weight:700}
+.right{text-align:right}
+.center{text-align:center}
+.mt-12{margin-top:12px}
+.mt-20{margin-top:20px}
+.mb-12{margin-bottom:12px}
+.mb-20{margin-bottom:20px}
+.flex{display:flex;align-items:center;gap:8px}
+.flex-between{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.flex-wrap{flex-wrap:wrap}
+.gap-4{gap:4px}
+.gap-12{gap:12px}
+.gap-20{gap:20px}
+.pill{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.pill.green{background:var(--success-light);color:var(--success)}
+.pill.red{background:var(--danger-light);color:var(--danger)}
+.pill.yellow{background:var(--warning-light);color:var(--warning)}
+.pill.blue{background:var(--primary-light);color:var(--primary)}
+.pill.gray{background:var(--bg);color:var(--text-muted)}
+.divider{height:1px;background:var(--border);margin:16px 0}
+
+/* Settings */
+.settings-row{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)}
+.settings-label{min-width:260px;font-weight:500;font-size:13px}
+
+/* Tooltip */
+.tooltip{position:relative;display:inline-block}
+.tooltip:hover::after{content:attr(data-tip);position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:var(--bg-sidebar);color:#fff;padding:4px 10px;border-radius:4px;font-size:11px;white-space:nowrap;z-index:200;margin-bottom:4px}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:#94a3b8}
+.sidebar ::-webkit-scrollbar-thumb{background:#475569}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">Воронка продаж<br><span>Промышленная маркировка</span></div>
+    <nav class="sidebar-nav" id="nav">
+      <div class="nav-item active" data-view="dashboard"><span class="nav-icon">&#9632;</span> Дашборд</div>
+      <div class="nav-item" data-view="funnel"><span class="nav-icon">&#9650;</span> Воронка</div>
+      <div class="nav-item" data-view="fridge"><span class="nav-icon">&#10052;</span> Холодильник</div>
+      <div class="nav-item" data-view="calendar"><span class="nav-icon">&#9776;</span> Платёжный календарь</div>
+      <div class="nav-item" data-view="plan"><span class="nav-icon">&#9733;</span> План продаж</div>
+      <div class="nav-item" data-view="sources"><span class="nav-icon">&#9679;</span> Источники</div>
+      <div class="nav-item" data-view="recommendations"><span class="nav-icon">!</span> Рекомендации</div>
+      <div class="nav-item" data-view="changes"><span class="nav-icon">&#8635;</span> Изменения</div>
+      <div class="nav-item" data-view="settings"><span class="nav-icon">&#9881;</span> Настройки</div>
+    </nav>
+    <div class="sidebar-footer" id="sidebarFooter">
+      <span class="status-dot" style="background:var(--danger)"></span> Нет данных. Загрузите CSV.
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title" id="topbarTitle">Дашборд</div>
+      <div class="topbar-actions">
+        <div class="topbar-info" id="topbarInfo"></div>
+        <label class="btn btn-secondary btn-sm" for="csvFile">Загрузить CSV</label>
+        <input type="file" id="csvFile" accept=".csv,.xls,.xlsx">
+        <button class="btn btn-secondary btn-sm" id="btnExport" onclick="exportState()" title="Сохранить данные в файл">Экспорт</button>
+        <label class="btn btn-secondary btn-sm" for="importFile" title="Загрузить сохранённые данные">Импорт</label>
+        <input type="file" id="importFile" accept=".json">
+      </div>
+    </div>
+    <div class="content">
+      <!-- DASHBOARD VIEW -->
+      <section id="view-dashboard" class="view active">
+        <div id="dashEmpty" class="empty-state">
+          <h3>Нет данных</h3>
+          <p>Загрузите выгрузку сделок из Битрикс24 (CSV), чтобы увидеть дашборд.</p>
+          <label class="btn btn-primary" for="csvFile">Выбрать CSV-файл</label>
+          <p class="small mt-12 muted">Формат: экспорт сделок из Битрикс24, разделитель — точка с запятой</p>
+        </div>
+        <div id="dashContent" style="display:none">
+          <!-- KPI -->
+          <div class="kpi-grid" id="kpiGrid"></div>
+          <!-- Auto summary -->
+          <div class="summary-box" id="summaryBox"></div>
+          <div class="grid-2">
+            <div class="card">
+              <div class="card-title">Воронка по стадиям <span class="badge" id="funnelBadge"></span></div>
+              <div id="dashFunnel"></div>
+            </div>
+            <div class="card">
+              <div class="card-title">Прогноз платежей <span class="badge">3 мес</span></div>
+              <div id="dashForecast"></div>
+            </div>
+          </div>
+          <div class="grid-2">
+            <div class="card">
+              <div class="card-title">Топ-5 флагов и рекомендаций</div>
+              <div id="dashAlerts"></div>
+            </div>
+            <div class="card">
+              <div class="card-title">Последние изменения</div>
+              <div id="dashChanges"></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">Холодильник (Саратов) — сводка <span class="badge" id="dashFridgeBadge"></span></div>
+            <div id="dashFridge"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FUNNEL VIEW -->
+      <section id="view-funnel" class="view">
+        <div class="card">
+          <div class="card-title">Воронка продаж</div>
+          <div class="flex gap-12 mb-12">
+            <select id="funnelManager" onchange="renderFunnel()"></select>
+            <select id="funnelSource" onchange="renderFunnel()"></select>
+          </div>
+          <div id="funnelChart"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Конверсия между стадиями</div>
+          <div id="conversionTable"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Сделки по стадиям <span class="badge" id="funnelDealsBadge"></span></div>
+          <div class="sub-tabs" id="funnelStageTabs"></div>
+          <div class="table-wrap">
+            <table id="funnelDealsTable"></table>
+          </div>
+        </div>
+      </section>
+
+      <!-- FRIDGE (SARATOV) VIEW -->
+      <section id="view-fridge" class="view">
+        <div class="kpi-grid" id="fridgeKpi"></div>
+        <div class="card">
+          <div class="card-title">Статистика по стадиям перехода в «Холодильник»</div>
+          <p class="small muted mb-12">С какой стадии клиенты были перенесены в «Саратов» — для анализа узких мест и реанимации.</p>
+          <div id="fridgeByStage"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Статистика по товарным категориям</div>
+          <div id="fridgeByCategory"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Все клиенты в «Холодильнике» <span class="badge" id="fridgeListBadge"></span></div>
+          <div class="sub-tabs" id="fridgeTabs">
+            <div class="sub-tab active" data-ftab="all" onclick="switchFridgeTab('all')">Все</div>
+            <div class="sub-tab" data-ftab="withsum" onclick="switchFridgeTab('withsum')">С указанной суммой</div>
+            <div class="sub-tab" data-ftab="recent" onclick="switchFridgeTab('recent')">Недавние (до 3 мес)</div>
+          </div>
+          <div class="table-wrap">
+            <table id="fridgeTable"></table>
+          </div>
+        </div>
+      </section>
+
+      <!-- PAYMENT CALENDAR VIEW -->
+      <section id="view-calendar" class="view">
+        <div class="card">
+          <div class="card-title">
+            Платёжный календарь
+            <span class="badge" id="calBadge"></span>
+            <span class="small muted" style="margin-left:auto">Кликните на ячейку для редактирования</span>
+          </div>
+          <div class="flex gap-12 mb-20 flex-wrap">
+            <div class="pill blue" id="calTotalCount"></div>
+            <div class="pill green" id="calWeighted"></div>
+            <div class="pill yellow" id="calUnweighted"></div>
+          </div>
+          <div class="table-wrap">
+            <table id="calTable"></table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Прогноз по месяцам</div>
+          <div id="calForecast"></div>
+        </div>
+      </section>
+
+      <!-- PLAN VIEW -->
+      <section id="view-plan" class="view">
+        <div class="card">
+          <div class="card-title">План продаж</div>
+          <div class="sub-tabs" id="planTabs">
+            <div class="sub-tab active" data-ptab="month" onclick="switchPlanTab('month')">Месяц</div>
+            <div class="sub-tab" data-ptab="quarter" onclick="switchPlanTab('quarter')">Квартал</div>
+            <div class="sub-tab" data-ptab="year" onclick="switchPlanTab('year')">Год</div>
+          </div>
+          <div id="planContent"></div>
+        </div>
+      </section>
+
+      <!-- SOURCES VIEW -->
+      <section id="view-sources" class="view">
+        <div class="card">
+          <div class="card-title">Анализ источников лидов</div>
+          <div class="table-wrap">
+            <table id="sourceTable"></table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Сумма сделок по источникам</div>
+          <div id="sourceChart"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">ROI источников — самые дорогие и быстрые сделки</div>
+          <div id="sourceRoi"></div>
+        </div>
+      </section>
+
+      <!-- RECOMMENDATIONS VIEW -->
+      <section id="view-recommendations" class="view">
+        <div class="card">
+          <div class="card-title">Автосаммари</div>
+          <div class="summary-box" id="recSummary"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Красные флаги <span class="badge" id="redFlagsBadge"></span></div>
+          <div id="recRedFlags"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Приоритетные действия <span class="badge" id="priorityBadge"></span></div>
+          <div id="recPriority"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Конверсионные подсказки</div>
+          <div id="recConversion"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Действия по менеджерам</div>
+          <div id="recManagers"></div>
+        </div>
+      </section>
+
+      <!-- CHANGES VIEW -->
+      <section id="view-changes" class="view">
+        <div class="card">
+          <div class="card-title">Изменения с последней выгрузки <span class="badge" id="changesBadge"></span></div>
+          <div class="sub-tabs" id="changeTabs">
+            <div class="sub-tab active" data-ctab="stage" onclick="switchChangeTab('stage')">Переходы по стадиям</div>
+            <div class="sub-tab" data-ctab="sum" onclick="switchChangeTab('sum')">Изменения сумм</div>
+            <div class="sub-tab" data-ctab="new" onclick="switchChangeTab('new')">Новые сделки</div>
+            <div class="sub-tab" data-ctab="lost" onclick="switchChangeTab('lost')">Отвалы и потери</div>
+          </div>
+          <div id="changeContent"></div>
+        </div>
+      </section>
+
+      <!-- SETTINGS VIEW -->
+      <section id="view-settings" class="view">
+        <div class="card">
+          <div class="card-title">Нормализация товарных категорий</div>
+          <p class="small muted mb-12">Дашборд автоматически сопоставляет варианты названий («Мясо», «Мясо, Полуфабрикаты», «Мясо и полуфабрикаты» и т.д.) к единому стандарту. Проверьте сопоставление ниже и при необходимости измените вручную.</p>
+          <div id="settingsCategoryNorm"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Дедлайны маркировки по товарным категориям</div>
+          <p class="small muted mb-12">Укажите срок обязательной маркировки для каждой товарной группы. Дашборд автоматически рассчитает срок оплаты = дедлайн − срок реализации (по умолчанию 2 месяца).</p>
+          <div id="settingsCategories"></div>
+          <div class="settings-row mt-12">
+            <div class="settings-label">Срок реализации как интегратора (мес.)</div>
+            <input type="number" id="implMonths" class="input-percent" min="1" max="12" value="2" onchange="saveSettings()">
+            <span class="small muted">Сколько месяцев нужно на запуск маркировки</span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Вероятности по стадиям (для платёжного календаря)</div>
+          <div id="settingsProbabilities"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Управление данными</div>
+          <div class="flex gap-12 flex-wrap">
+            <button class="btn btn-secondary" onclick="exportState()">Экспортировать все данные (JSON)</button>
+            <button class="btn btn-danger" onclick="resetAllData()">Сбросить все данные</button>
+          </div>
+          <p class="small muted mt-12">Данные хранятся локально в браузере (localStorage). При очистке кэша браузера данные будут потеряны — используйте экспорт для резервной копии.</p>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// CONFIG
+// ============================================================
+const STAGES = [
+  {id:'ЛИД',short:'Лид',color:'#94a3b8',active:true,threshold:14},
+  {id:'Встреча',short:'Встреча',color:'#60a5fa',active:true,threshold:21},
+  {id:'КП подготовка',short:'КП подготовка',color:'#818cf8',active:true,threshold:21},
+  {id:'КП выходим на защиту',short:'КП выходим на защиту',color:'#a78bfa',active:true,threshold:21},
+  {id:'КП согласовании у клиента',short:'КП на согласовании',color:'#c084fc',active:true,threshold:30},
+  {id:'Договор',short:'Договор',color:'#f59e0b',active:true,threshold:14},
+  {id:'Запуск',short:'Запуск',color:'#10b981',active:true,threshold:0},
+  {id:'Передача на поддержку',short:'Передача на поддержку',color:'#059669',active:false,threshold:0},
+  {id:'Кейс',short:'Кейс',color:'#047857',active:false,threshold:0},
+  {id:'Проработка доп.контуров',short:'Проработка доп. контуров',color:'#6b7280',active:false,threshold:0},
+  {id:'Саратов',short:'Саратов',color:'#ef4444',active:false,threshold:0},
+  {id:'Отвал',short:'Отвал',color:'#991b1b',active:false,threshold:0},
+];
+const STAGE_INDEX = {}; STAGES.forEach((s,i)=>STAGE_INDEX[s.id]=i);
+const PAYMENT_STAGES = ['КП подготовка','КП выходим на защиту','КП согласовании у клиента','Договор'];
+const DEFAULT_PROBS = {
+  'ЛИД':5,'Встреча':15,'КП подготовка':10,'КП выходим на защиту':10,
+  'КП согласовании у клиента':50,'Договор':80,'Запуск':95,
+  'Передача на поддержку':100,'Кейс':100,'Проработка доп.контуров':80,'Саратов':0,'Отвал':0,
+};
+const PAYMENT_PROBS = {
+  'КП подготовка':10,'КП выходим на защиту':10,'КП согласовании у клиента':50,'Договор':50,
+};
+const STORAGE_KEY = 'dash_promka_v1';
+
+// ============================================================
+// CATEGORY NORMALIZATION
+// ============================================================
+const CATEGORY_SYNONYMS = {
+  'мясо': 'Мясо и полуфабрикаты',
+  'мясо, полуфабрикаты': 'Мясо и полуфабрикаты',
+  'мясо и полуфабрикаты': 'Мясо и полуфабрикаты',
+  'мясо, полуфабрикаты, консервы': 'Мясо и полуфабрикаты',
+  'мясо,полуфабрикаты': 'Мясо и полуфабрикаты',
+  'полуфабрикаты': 'Мясо и полуфабрикаты',
+  'мясо и полуфабрикат': 'Мясо и полуфабрикаты',
+  'мясная продукция': 'Мясо и полуфабрикаты',
+  'мясопродукты': 'Мясо и полуфабрикаты',
+  'мясопродукция': 'Мясо и полуфабрикаты',
+
+  'гигиена': 'Гигиена',
+  'санитарно-гигиеническая продукция': 'Гигиена',
+  'сгп': 'Гигиена',
+  'бумажная продукция': 'Гигиена',
+  'тиссью': 'Гигиена',
+  'предметы личной гигиены': 'Гигиена',
+
+  'бакалея': 'Бакалея',
+  'бакалея,детское питание': 'Бакалея',
+  'детское питание, бакалея': 'Детское питание',
+
+  'консервы': 'Консервы',
+  'мясные консервы': 'Консервы',
+  'рыбные консервы': 'Консервы',
+  'плодоовощные консервы': 'Консервы',
+
+  'детское питание': 'Детское питание',
+  'детское и спец.питание': 'Детское питание',
+  'детское и специальное питание': 'Детское питание',
+  'продукты для детей': 'Детское питание',
+
+  'строительные материалы': 'Стройматериалы',
+  'стройматериалы': 'Стройматериалы',
+  'стройматериалы и изделия': 'Стройматериалы',
+  'сми': 'Стройматериалы',
+  'строительные изделия': 'Стройматериалы',
+  'гипс и стройматериалы': 'Стройматериалы',
+
+  'мед.изделия': 'Медизделия',
+  'медицинские изделия': 'Медизделия',
+  'мед. изделия': 'Медизделия',
+  'медизделия': 'Медизделия',
+  'имн': 'Медизделия',
+
+  'молочная продукция': 'Молочная продукция',
+  'молочные продукты': 'Молочная продукция',
+  'молоко и молочная продукция': 'Молочная продукция',
+  'молоко': 'Молочная продукция',
+
+  'косметика': 'Косметика',
+  'косметическая продукция': 'Косметика',
+  'парфюмерия': 'Косметика',
+  'косметика и парфюмерия': 'Косметика',
+
+  'товары для дома': 'Товары для дома',
+  'товары народного потребления': 'Товары для дома',
+  'тнп': 'Товары для дома',
+  'бытовая химия': 'Товары для дома',
+  'бумажно-беловая продукция': 'Товары для дома',
+
+  'удобрения': 'Удобрения',
+  'минеральные удобрения': 'Удобрения',
+  'агрохимия': 'Удобрения',
+
+  'трубы': 'Трубы',
+  'полимерные трубы': 'Трубы',
+  'пластиковые трубы': 'Трубы',
+
+  'пиво': 'Пиво',
+  'пивная продукция': 'Пиво',
+  'слабоалкогольная продукция': 'Пиво',
+
+  'подсолнечное масло': 'Масложировая продукция',
+  'масложировая продукция': 'Масложировая продукция',
+  'растительное масло': 'Масложировая продукция',
+  'масло': 'Масложировая продукция',
+
+  'сладости': 'Кондитерские изделия',
+  'кондитерские изделия': 'Кондитерские изделия',
+  'кондитерка': 'Кондитерские изделия',
+  'сладости и кондитерские изделия': 'Кондитерские изделия',
+  'шоколад': 'Кондитерские изделия',
+
+  'вода': 'Вода и напитки',
+  'напитки': 'Вода и напитки',
+  'вода и напитки': 'Вода и напитки',
+  'безалкогольные напитки': 'Вода и напитки',
+
+  'обувь': 'Обувь',
+  'лекарства': 'Лекарства',
+  'фармацевтика': 'Лекарства',
+  'лекарственные препараты': 'Лекарства',
+
+  'одежда': 'Одежда',
+  'текстиль': 'Одежда',
+  'швейные изделия': 'Одежда',
+
+  '?': 'Не определена',
+  'неизвестно': 'Не определена',
+};
+
+const CANONICAL_CATEGORIES = [
+  'Мясо и полуфабрикаты','Гигиена','Бакалея','Консервы','Детское питание',
+  'Стройматериалы','Медизделия','Молочная продукция','Косметика','Товары для дома',
+  'Удобрения','Трубы','Пиво','Масложировая продукция','Кондитерские изделия',
+  'Вода и напитки','Обувь','Лекарства','Одежда','Не определена',
+];
+
+function normalizeCategory(rawCat){
+  if(!rawCat) return '';
+  // User override first
+  if(State.categoryOverrides && State.categoryOverrides[rawCat]){
+    return State.categoryOverrides[rawCat];
+  }
+  // Normalize: lowercase, trim, collapse spaces, remove extra punctuation
+  let key = rawCat.toLowerCase().trim()
+    .replace(/\s+/g, ' ')
+    .replace(/,\s*/g, ',')
+    .replace(/\s*,\s*/g, ',')
+    .replace(/,\s*$/, '')
+    .replace(/^,/, '');
+  // Try exact match
+  if(CATEGORY_SYNONYMS[key]) return CATEGORY_SYNONYMS[key];
+  // Try without commas
+  const noComma = key.replace(/,/g, ' ').replace(/\s+/g, ' ').trim();
+  if(CATEGORY_SYNONYMS[noComma]) return CATEGORY_SYNONYMS[noComma];
+  // Try with " и " instead of comma
+  const withI = key.replace(/,/g, ' и ');
+  if(CATEGORY_SYNONYMS[withI]) return CATEGORY_SYNONYMS[withI];
+  // Try partial match: if raw category contains a known keyword
+  for(const [syn, canon] of Object.entries(CATEGORY_SYNONYMS)){
+    if(key.includes(syn) || syn.includes(key)){
+      return canon;
+    }
+  }
+  // If multi-category like "Мясо, Полуфабрикаты" and we have both as synonyms, return the first match
+  const parts = key.split(/[,/]/).map(p=>p.trim());
+  for(const part of parts){
+    if(CATEGORY_SYNONYMS[part]) return CATEGORY_SYNONYMS[part];
+  }
+  // Return original (capitalized)
+  return rawCat.charAt(0).toUpperCase() + rawCat.slice(1);
+}
+
+// ============================================================
+// STATE
+// ============================================================
+let State = {
+  deals: [],
+  previousDeals: [],
+  calendarOverrides: {},
+  salesPlan: { monthly:{}, quarterly:{}, annual:{} },
+  categoryDeadlines: {},
+  categoryOverrides: {},
+  stageProbs: {...PAYMENT_PROBS},
+  implMonths: 2,
+  lastUpdate: null,
+  prevUpdate: null,
+};
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      const s = JSON.parse(raw);
+      State = {...State, ...s};
+    }
+  }catch(e){ console.warn('loadState error', e); }
+}
+
+function saveState(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(State));
+  }catch(e){ console.warn('saveState error', e); }
+}
+
+function resetAllData(){
+  if(!confirm('Сбросить все данные? Это удалит сделки, настройки, план и редакции платёжного календаря.')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  State = {
+    deals:[], previousDeals:[], calendarOverrides:{},
+    salesPlan:{monthly:{},quarterly:{},annual:{}},
+    categoryDeadlines:{}, categoryOverrides:{}, stageProbs:{...PAYMENT_PROBS}, implMonths:2,
+    lastUpdate:null, prevUpdate:null,
+  };
+  location.reload();
+}
+
+// ============================================================
+// CSV PARSING
+// ============================================================
+function parseCSV(text){
+  // detect delimiter
+  const delim = text.includes(';') ? ';' : ',';
+  const rows = [];
+  let field = '', row = [], inQuotes = false;
+  for(let i=0; i<text.length; i++){
+    const c = text[i];
+    if(inQuotes){
+      if(c === '"'){
+        if(text[i+1] === '"'){ field+='"'; i++; }
+        else inQuotes = false;
+      } else field += c;
+    } else {
+      if(c === '"') inQuotes = true;
+      else if(c === delim){ row.push(field); field=''; }
+      else if(c === '\n'){ row.push(field); rows.push(row); row=[]; field=''; }
+      else if(c === '\r'){ /* skip */ }
+      else field += c;
+    }
+  }
+  if(field || row.length){ row.push(field); rows.push(row); }
+  if(!rows.length) return [];
+  const headers = rows[0].map(h=>h.trim().replace(/^"|"$/g,''));
+  return rows.slice(1).filter(r=>r.length>1).map(r=>{
+    const obj = {};
+    headers.forEach((h,i)=> obj[h] = (r[i]||'').trim().replace(/^"|"$/g,''));
+    return obj;
+  });
+}
+
+function parseDate(s){
+  if(!s) return null;
+  const m = s.match(/(\d{2})\.(\d{2})\.(\d{4})(?:\s+(\d{2}):(\d{2}):(\d{2}))?/);
+  if(!m) return null;
+  return new Date(m[3], parseInt(m[2])-1, m[1], m[4]||0, m[5]||0, m[6]||0);
+}
+
+function parseFloatRu(s){
+  if(!s) return 0;
+  return parseFloat(s.replace(/\s/g,'').replace(',','.')) || 0;
+}
+
+function parseDealName(title){
+  // Format: "ClientName_Category (Source)" or just "ClientName"
+  let client = title, category = '', source = '';
+  const underscoreIdx = title.indexOf('_');
+  if(underscoreIdx >= 0){
+    client = title.substring(0, underscoreIdx).trim();
+    const rest = title.substring(underscoreIdx + 1).trim();
+    const parenMatch = rest.match(/\(([^)]+)\)\s*$/);
+    if(parenMatch){
+      source = parenMatch[1].trim();
+      category = rest.substring(0, parenMatch.index).trim();
+    } else {
+      category = rest;
+    }
+  }
+  // Clean up escaped quotes
+  client = client.replace(/""/g,'"').replace(/^"|"$/g,'').trim();
+  // Normalize source: capitalize first letter only
+  if(source) source = source.charAt(0).toUpperCase() + source.slice(1);
+  return { client, category, source };
+}
+
+function processDeals(rows){
+  return rows.map(r=>{
+    const stage = r['Стадия сделки'] || r['Стадия'] || '';
+    const title = r['Название сделки'] || r['Название'] || '';
+    const parsed = parseDealName(title);
+    const amount = parseFloatRu(r['Сумма'] || '0');
+    const createdDate = parseDate(r['Дата создания'] || '');
+    const modifiedDate = parseDate(r['Дата изменения'] || '');
+    const stageModifiedDate = parseDate(r['Дата изменения стадии'] || '');
+    const startDate = parseDate(r['Дата начала'] || '');
+    return {
+      id: r['ID'] || '',
+      type: r['Тип'] || '',
+      stage: stage,
+      currency: r['Валюта'] || '',
+      responsible: (r['Ответственный'] || '').trim(),
+      createdDate: createdDate ? createdDate.toISOString() : null,
+      previousStage: r['Предыдущая стадия'] || '',
+      title: title,
+      amount: amount,
+      modifiedDate: modifiedDate ? modifiedDate.toISOString() : null,
+      startDate: startDate ? startDate.toISOString() : null,
+      stageModifiedBy: r['Кто изменил стадию'] || '',
+      stageModifiedDate: stageModifiedDate ? stageModifiedDate.toISOString() : null,
+      client: parsed.client,
+      category: normalizeCategory(parsed.category),
+      rawCategory: parsed.category,
+      source: parsed.source,
+    };
+  }).filter(d => d.id);
+}
+
+// ============================================================
+// CALCULATIONS
+// ============================================================
+function getStageIndex(stage){
+  return STAGE_INDEX[stage] ?? -1;
+}
+
+function getActiveStages(){
+  return STAGES.filter(s=>s.active);
+}
+
+function getTerminalStages(){
+  return STAGES.filter(s=>!s.active);
+}
+
+function getFunnelData(deals, filter){
+  let filtered = deals || State.deals;
+  if(filter){
+    if(filter.manager && filter.manager !== 'all'){
+      filtered = filtered.filter(d=>d.responsible === filter.manager);
+    }
+    if(filter.source && filter.source !== 'all'){
+      filtered = filtered.filter(d=>d.source === filter.source);
+    }
+  }
+  return STAGES.map(s=>{
+    const stageDeals = filtered.filter(d=>d.stage === s.id);
+    const sum = stageDeals.reduce((a,d)=>a + (d.amount||0), 0);
+    return { ...s, deals: stageDeals, count: stageDeals.length, sum };
+  });
+}
+
+function getActiveDealCount(){
+  return State.deals.filter(d => STAGE_INDEX[d.stage] >= 0 && STAGE_INDEX[d.stage] <= 6).length;
+}
+
+function getActivePipelineSum(){
+  return State.deals
+    .filter(d => STAGE_INDEX[d.stage] >= 0 && STAGE_INDEX[d.stage] <= 6)
+    .reduce((a,d)=>a + (d.amount||0), 0);
+}
+
+function getWeightedForecast(){
+  return State.deals
+    .filter(d => STAGE_INDEX[d.stage] >= 0 && STAGE_INDEX[d.stage] <= 6)
+    .reduce((a,d)=>a + (d.amount||0) * (DEFAULT_PROBS[d.stage]||0) / 100, 0);
+}
+
+function getConversionData(filter){
+  const funnel = getFunnelData(State.deals, filter);
+  const activeFunnel = funnel.filter(f => f.active);
+  const results = [];
+  for(let i=0; i<activeFunnel.length-1; i++){
+    const curr = activeFunnel[i];
+    const next = activeFunnel[i+1];
+    // Deals beyond stage i (only active stages)
+    const beyond = activeFunnel.slice(i+1).reduce((a,s)=>a+s.count, 0);
+    const total = curr.count + beyond;
+    const conv = total > 0 ? (beyond / total * 100) : 0;
+    const stuckPct = total > 0 ? (curr.count / total * 100) : 0;
+    // Recent transitions using previousStage field
+    let deals = State.deals;
+    if(filter){
+      if(filter.manager && filter.manager !== 'all') deals = deals.filter(d=>d.responsible === filter.manager);
+      if(filter.source && filter.source !== 'all') deals = deals.filter(d=>d.source === filter.source);
+    }
+    const leftStage = deals.filter(d=>d.previousStage === curr.id);
+    const leftToProgress = leftStage.filter(d=>{const idx=getStageIndex(d.stage);return idx>i && d.stage!=='Саратов' && d.stage!=='Отвал';});
+    const leftToLost = leftStage.filter(d=>d.stage==='Саратов' || d.stage==='Отвал');
+    results.push({
+      from: curr, to: next,
+      conversion: conv,
+      total: total,
+      dropOff: curr.count,
+      dropOffPct: stuckPct,
+      recentCount: leftStage.length,
+      recentProgress: leftToProgress.length,
+      recentLost: leftToLost.length,
+      recentConv: leftStage.length > 0 ? (leftToProgress.length/leftStage.length*100) : 0,
+      recentLostPct: leftStage.length > 0 ? (leftToLost.length/leftStage.length*100) : 0,
+    });
+  }
+  return results;
+}
+
+function getPaymentCalendar(){
+  const deals = State.deals.filter(d => PAYMENT_STAGES.includes(d.stage) && d.amount > 0);
+  return deals.map(d=>{
+    const override = State.calendarOverrides[d.id] || {};
+    let prob = override.probability ?? State.stageProbs[d.stage] ?? PAYMENT_PROBS[d.stage] ?? 0;
+    let amount = override.amount ?? d.amount;
+    let paymentMonth = override.paymentMonth || autoCalcPaymentMonth(d);
+    let note = override.note || '';
+    let excluded = override.excluded || false;
+    return { ...d, prob, amount, paymentMonth, note, excluded };
+  });
+}
+
+function autoCalcPaymentMonth(deal){
+  if(!deal.category || !State.categoryDeadlines[deal.category]) return null;
+  const deadline = new Date(State.categoryDeadlines[deal.category]);
+  if(isNaN(deadline.getTime())) return null;
+  const payment = new Date(deadline);
+  payment.setMonth(payment.getMonth() - State.implMonths);
+  return payment.toISOString().substring(0,7); // YYYY-MM
+}
+
+function getMonthlyForecast(){
+  const cal = getPaymentCalendar().filter(d=>!d.excluded && d.paymentMonth);
+  const months = {};
+  cal.forEach(d=>{
+    if(!months[d.paymentMonth]) months[d.paymentMonth] = { weighted:0, unweighted:0, count:0, deals:[] };
+    months[d.paymentMonth].weighted += d.amount * d.prob / 100;
+    months[d.paymentMonth].unweighted += d.amount;
+    months[d.paymentMonth].count++;
+    months[d.paymentMonth].deals.push(d);
+  });
+  return months;
+}
+
+function getMonthsRange(count){
+  const months = [];
+  const now = new Date();
+  for(let i=0; i<count; i++){
+    const d = new Date(now.getFullYear(), now.getMonth()+i, 1);
+    months.push(d.toISOString().substring(0,7));
+  }
+  return months;
+}
+
+function getSourceAnalysis(){
+  const deals = State.deals.filter(d => d.source);
+  const groups = {};
+  deals.forEach(d=>{
+    if(!groups[d.source]) groups[d.source] = { source:d.source, deals:[], count:0, sum:0, wonCount:0, wonSum:0, activeCount:0, activeSum:0 };
+    const g = groups[d.source];
+    g.deals.push(d); g.count++; g.sum += d.amount||0;
+    const idx = STAGE_INDEX[d.stage];
+    if(idx >= 6){ g.wonCount++; g.wonSum += d.amount||0; } // Запуск и далее
+    else if(idx >= 0 && idx <= 6){ g.activeCount++; g.activeSum += d.amount||0; }
+  });
+  return Object.values(groups).sort((a,b)=>b.sum - a.sum);
+}
+
+function getActualRevenue(period){
+  // Deals that reached "Запуск" stage, by stage change date
+  const deals = State.deals.filter(d => STAGE_INDEX[d.stage] >= 6 && STAGE_INDEX[d.stage] <= 8); // Запуск, Передача, Кейс
+  if(!period) return deals.reduce((a,d)=>a + (d.amount||0), 0);
+  return deals.filter(d=>{
+    const dt = d.stageModifiedDate ? new Date(d.stageModifiedDate) : null;
+    if(!dt) return false;
+    if(period.length === 7) return dt.toISOString().substring(0,7) === period; // month
+    if(period.length === 6) return dt.toISOString().substring(0,7).startsWith(period.substring(0,4)+'-') && Math.ceil(dt.getMonth()/3+1) === parseInt(period.substring(5)); // quarter - simplified
+    if(period.length === 4) return dt.getFullYear().toString() === period; // year
+    return false;
+  }).reduce((a,d)=>a + (d.amount||0), 0);
+}
+
+function getPlanProgress(){
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth()+1).padStart(2,'0');
+  const monthKey = `${y}-${m}`;
+  const q = Math.ceil((now.getMonth()+1)/3);
+  const quarterKey = `${y}-Q${q}`;
+  const yearKey = `${y}`;
+  
+  const monthPlan = State.salesPlan.monthly[monthKey] || 0;
+  const quarterPlan = State.salesPlan.quarterly[quarterKey] || 0;
+  const yearPlan = State.salesPlan.annual[yearKey] || 0;
+
+  // Actual: deals at Запуск/Передача/Кейс with stageModifiedDate in period
+  const actualMonth = getActualForPeriod(monthKey);
+  const actualQuarter = getActualForQuarter(quarterKey);
+  const actualYear = getActualForPeriod(yearKey);
+
+  // Forecast: weighted payment calendar for period
+  const forecast = getMonthlyForecast();
+  const nowMonth = monthKey;
+  const quarterMonths = getQuarterMonths(quarterKey);
+  const yearMonths = [];
+  for(let mo=1; mo<=12; mo++) yearMonths.push(`${y}-${String(mo).padStart(2,'0')}`);
+  
+  const forecastMonth = (forecast[nowMonth]?.weighted || 0);
+  const forecastQuarter = quarterMonths.reduce((a,mk)=>a + (forecast[mk]?.weighted || 0), 0);
+  const forecastYear = yearMonths.reduce((a,mk)=>a + (forecast[mk]?.weighted || 0), 0);
+
+  return {
+    month: { plan: monthPlan, actual: actualMonth, forecast: forecastMonth, key: monthKey },
+    quarter: { plan: quarterPlan, actual: actualQuarter, forecast: forecastQuarter, key: quarterKey },
+    year: { plan: yearPlan, actual: actualYear, forecast: forecastYear, key: yearKey },
+  };
+}
+
+function getActualForPeriod(period){
+  const deals = State.deals.filter(d => {
+    const idx = STAGE_INDEX[d.stage];
+    if(idx < 6 || idx > 8) return false; // Запуск through Кейс
+    const dt = d.stageModifiedDate ? new Date(d.stageModifiedDate) : (d.modifiedDate ? new Date(d.modifiedDate) : null);
+    if(!dt) return false;
+    if(period.length === 7) return dt.toISOString().substring(0,7) === period;
+    if(period.length === 4) return dt.getFullYear().toString() === period;
+    return false;
+  });
+  return deals.reduce((a,d)=>a + (d.amount||0), 0);
+}
+
+function getActualForQuarter(quarterKey){
+  const months = getQuarterMonths(quarterKey);
+  return months.reduce((a,mk)=>a + getActualForPeriod(mk), 0);
+}
+
+function getQuarterMonths(quarterKey){
+  const [y, q] = quarterKey.split('-Q');
+  const startMonth = (parseInt(q)-1)*3 + 1;
+  return [startMonth, startMonth+1, startMonth+2].map(mo => `${y}-${String(mo).padStart(2,'0')}`);
+}
+
+function getManagers(){
+  return [...new Set(State.deals.map(d=>d.responsible).filter(r=>r))].sort();
+}
+
+function getSources(){
+  return [...new Set(State.deals.map(d=>d.source).filter(s=>s))].sort();
+}
+
+function getCategories(){
+  return [...new Set(State.deals.map(d=>d.category).filter(c=>c))].sort();
+}
+
+function getRawCategories(){
+  return [...new Set(State.deals.map(d=>d.rawCategory).filter(c=>c))].sort();
+}
+
+function daysSince(dateStr){
+  if(!dateStr) return 0;
+  const dt = new Date(dateStr);
+  return Math.floor((Date.now() - dt.getTime()) / 86400000);
+}
+
+// ============================================================
+// RECOMMENDATIONS
+// ============================================================
+function getRedFlags(){
+  const flags = [];
+  State.deals.forEach(d=>{
+    const stageInfo = STAGES.find(s=>s.id===d.stage);
+    if(!stageInfo || !stageInfo.threshold) return;
+    const idx = STAGE_INDEX[d.stage];
+    if(idx < 0 || idx > 6) return; // only active stages
+    const days = daysSince(d.stageModifiedDate);
+    if(days > stageInfo.threshold){
+      const severity = days > stageInfo.threshold * 2 ? 'danger' : 'warning';
+      flags.push({
+        type: severity,
+        client: d.client || d.title,
+        stage: stageInfo.short,
+        days,
+        stageThreshold: stageInfo.threshold,
+        amount: d.amount,
+        responsible: d.responsible || 'не назначен',
+        text: `«${d.client||d.title}» на стадии «${stageInfo.short}» уже ${days} дн.`,
+        action: getRecommendedAction(d.stage, days),
+      });
+    }
+  });
+  return flags.sort((a,b)=>b.days - a.days);
+}
+
+function getRecommendedAction(stage, days){
+  const actions = {
+    'ЛИД': 'Нужно связаться с клиентом',
+    'Встреча': 'Запланировать встречу или звонок',
+    'КП подготовка': 'Завершить подготовку КП',
+    'КП выходим на защиту': 'Назначить защиту КП',
+    'КП согласовании у клиента': 'Позвонить клиенту — узнать статус согласования',
+    'Договор': 'Связаться с клиентом по подписанию договора',
+    'Запуск': 'Проверить статус запуска',
+  };
+  return actions[stage] || 'Связаться с клиентом';
+}
+
+function getPriorityActions(){
+  const actions = [];
+  const cal = getPaymentCalendar().filter(d=>!d.excluded && d.paymentMonth);
+  const now = new Date();
+  cal.forEach(d=>{
+    const payDate = new Date(d.paymentMonth + '-01');
+    const monthsUntil = (payDate.getFullYear() - now.getFullYear()) * 12 + (payDate.getMonth() - now.getMonth());
+    const stageIdx = STAGE_INDEX[d.stage];
+    if(monthsUntil <= 1 && monthsUntil >= 0 && stageIdx <= 4){
+      // Payment within 1 month but still at КП stage
+      actions.push({
+        type: 'danger',
+        client: d.client,
+        stage: STAGES[stageIdx].short,
+        monthsUntil,
+        amount: d.amount,
+        text: `«${d.client}»: дедлайн маркировки через ${monthsUntil === 0 ? 'этот месяц' : '1 месяц'}, а клиент ещё на «${STAGES[stageIdx].short}». Срочно выходить на договор.`,
+        action: 'Срочно выходить на договор',
+      });
+    } else if(monthsUntil <= 2 && monthsUntil >= 0 && stageIdx === 4){
+      // КП на согласовании, payment in 2 months
+      actions.push({
+        type: 'warning',
+        client: d.client,
+        stage: STAGES[stageIdx].short,
+        monthsUntil,
+        amount: d.amount,
+        text: `«${d.client}»: оплата ожидается через ${monthsUntil} мес., КП ещё на согласовании.`,
+        action: 'Ускорить согласование КП',
+      });
+    }
+  });
+  return actions.sort((a,b)=>a.monthsUntil - b.monthsUntil);
+}
+
+function getConversionHints(){
+  const conv = getConversionData();
+  const hints = [];
+  conv.forEach(c=>{
+    if(c.from.count >= 3 && c.dropOffPct > 60){
+      hints.push({
+        text: `На стадии «${c.from.short}» застряло ${Math.round(c.dropOffPct)}% сделок (${c.dropOff} из ${c.total}).`,
+        action: `Проверьте процесс на стадии «${c.from.short}»`,
+        pct: c.dropOffPct,
+      });
+    }
+    if(c.recentCount >= 2 && c.recentLostPct > 50){
+      hints.push({
+        text: `На стадии «${c.from.short}» → «${c.to.short}» за последнее время ${c.recentLost} из ${c.recentCount} сделок ушли в «Саратов» или «Отвал» (${Math.round(c.recentLostPct)}%).`,
+        action: `Проверьте причины оттока на стадии «${c.from.short}»`,
+        pct: c.recentLostPct,
+      });
+    }
+  });
+  // Find biggest bottleneck (highest stuckPct among stages with 3+ deals)
+  const candidates = conv.filter(c => c.from.count >= 3);
+  if(candidates.length){
+    const worst = candidates.reduce((a,b)=> a.dropOffPct > b.dropOffPct ? a : b);
+    hints.unshift({
+      text: `Ключевой затык воронки: «${worst.from.short}» — ${Math.round(worst.dropOffPct)}% сделок застряли на этой стадии (${worst.dropOff} из ${worst.total}).`,
+      action: 'Требуется анализ причин и корректирующие действия',
+      pct: worst.dropOffPct,
+      isMain: true,
+    });
+  }
+  return hints;
+}
+
+function getManagerActions(){
+  const managers = {};
+  State.deals.forEach(d=>{
+    const mgr = d.responsible || 'Не назначен';
+    if(!managers[mgr]) managers[mgr] = { name: mgr, deals: [], stuckCount: 0, deadlineCount: 0, totalActive: 0 };
+    const idx = STAGE_INDEX[d.stage];
+    if(idx >= 0 && idx <= 6){
+      managers[mgr].totalActive++;
+      managers[mgr].deals.push(d);
+      const stageInfo = STAGES[idx];
+      if(stageInfo.threshold && daysSince(d.stageModifiedDate) > stageInfo.threshold){
+        managers[mgr].stuckCount++;
+      }
+    }
+  });
+  // Add deadline warnings
+  const cal = getPaymentCalendar().filter(d=>!d.excluded && d.paymentMonth);
+  const now = new Date();
+  cal.forEach(d=>{
+    const mgr = d.responsible || 'Не назначен';
+    if(!managers[mgr]) return;
+    const payDate = new Date(d.paymentMonth + '-01');
+    const monthsUntil = (payDate.getFullYear()-now.getFullYear())*12 + (payDate.getMonth()-now.getMonth());
+    if(monthsUntil <= 2 && monthsUntil >= 0){
+      managers[mgr].deadlineCount++;
+    }
+  });
+  return Object.values(managers).sort((a,b)=>b.stuckCount - a.stuckCount);
+}
+
+function getAutoSummary(){
+  const progress = getPlanProgress();
+  const activeCount = getActiveDealCount();
+  const pipelineSum = getActivePipelineSum();
+  const weighted = getWeightedForecast();
+  const flags = getRedFlags();
+  
+  // Changes
+  const changes = getChanges();
+  const stageUp = changes.stageUp.length;
+  const stageDown = changes.stageDown.length;
+  const newDeals = changes.newDeals.length;
+  const lost = changes.lostDeals.length;
+
+  let text = '';
+  text += `<strong>По итогам обновления от ${formatDate(State.lastUpdate)}:</strong> `;
+  text += `в воронке <strong>${activeCount}</strong> активных сделок на сумму <strong>${fmtRub(pipelineSum)}</strong>. `;
+  text += `Взвешенный прогноз — <strong>${fmtRub(weighted)}</strong>. `;
+  
+  if(stageUp > 0) text += `${stageUp} клиент(ов) перешли на более позднюю стадию. `;
+  if(stageDown > 0) text += `${stageDown} клиент(ов) откатились на более раннюю стадию. `;
+  if(newDeals > 0) text += `Добавлено ${newDeals} новых сделок. `;
+  if(lost > 0) text += `${lost} клиент(ов) ушли в «Саратов» или «Отвал». `;
+
+  const mp = progress.month;
+  if(mp.plan > 0){
+    const pct = mp.plan > 0 ? Math.round(mp.actual / mp.plan * 100) : 0;
+    const fctPct = mp.plan > 0 ? Math.round((mp.actual + mp.forecast) / mp.plan * 100) : 0;
+    text += `План на месяц (${formatMonth(mp.key)}) выполнен на <strong>${pct}%</strong> (факт: ${fmtRub(mp.actual)}, план: ${fmtRub(mp.plan)}). `;
+    text += `С учётом прогноза — ${fctPct}%. `;
+  }
+  
+  if(flags.length > 0) text += `Внимание: ${flags.length} сделок зависли на стадиях слишком долго. `;
+  
+  return text;
+}
+
+// ============================================================
+// CHANGE TRACKING
+// ============================================================
+function getChanges(){
+  const prev = State.previousDeals;
+  const curr = State.deals;
+  const prevMap = {}; prev.forEach(d=>prevMap[d.id]=d);
+  const currMap = {}; curr.forEach(d=>currMap[d.id]=d);
+
+  const stageUp = [], stageDown = [], sumChanges = [], newDeals = [], lostDeals = [];
+
+  curr.forEach(d=>{
+    const p = prevMap[d.id];
+    if(!p){
+      newDeals.push(d);
+      return;
+    }
+    if(p.stage !== d.stage){
+      const pi = getStageIndex(p.stage);
+      const ci = getStageIndex(d.stage);
+      if(ci > pi) stageUp.push({ deal:d, from:p.stage, to:d.stage, prevDeal:p });
+      else stageDown.push({ deal:d, from:p.stage, to:d.stage, prevDeal:p });
+      
+      // Check if moved to Саратов/Отвал
+      if(d.stage === 'Саратов' || d.stage === 'Отвал'){
+        lostDeals.push({ deal:d, from:p.stage, to:d.stage, prevDeal:p });
+      }
+    }
+    if(p.amount !== d.amount){
+      const diff = d.amount - p.amount;
+      sumChanges.push({ deal:d, oldAmount:p.amount, newAmount:d.amount, diff });
+    }
+  });
+
+  prev.forEach(d=>{
+    if(!currMap[d.id]){
+      lostDeals.push({ deal:d, from:d.stage, to:'исчез', prevDeal:d });
+    }
+  });
+
+  return { stageUp, stageDown, sumChanges, newDeals, lostDeals };
+}
+
+// ============================================================
+// FORMATTING
+// ============================================================
+function fmtRub(n){
+  if(!n || n === 0) return '0 ₽';
+  const abs = Math.abs(n);
+  if(abs >= 1e9) return (n/1e9).toFixed(1).replace('.0','') + ' млрд ₽';
+  if(abs >= 1e6) return (n/1e6).toFixed(1).replace('.0','') + ' млн ₽';
+  if(abs >= 1e3) return Math.round(n/1e3) + ' тыс ₽';
+  return Math.round(n).toLocaleString('ru-RU') + ' ₽';
+}
+
+function fmtRubFull(n){
+  return Math.round(n||0).toLocaleString('ru-RU') + ' ₽';
+}
+
+function formatDate(iso){
+  if(!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('ru-RU');
+}
+
+function formatMonth(ym){
+  if(!ym) return '—';
+  const [y,m] = ym.split('-');
+  const names = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+  return `${names[parseInt(m)-1]} ${y}`;
+}
+
+function formatQuarter(yq){
+  if(!yq) return '—';
+  return yq.replace('-Q', ' кв ');
+}
+
+function fmtPct(n){ return Math.round(n) + '%'; }
+
+// ============================================================
+// RENDER: DASHBOARD
+// ============================================================
+function renderDashboard(){
+  if(!State.deals.length){
+    document.getElementById('dashEmpty').style.display = '';
+    document.getElementById('dashContent').style.display = 'none';
+    return;
+  }
+  document.getElementById('dashEmpty').style.display = 'none';
+  document.getElementById('dashContent').style.display = '';
+
+  // KPI
+  const progress = getPlanProgress();
+  const activeCount = getActiveDealCount();
+  const pipelineSum = getActivePipelineSum();
+  const weighted = getWeightedForecast();
+  const monthPct = progress.month.plan > 0 ? Math.round(progress.month.actual / progress.month.plan * 100) : 0;
+
+  const kpiData = [
+    {label:'Активных сделок', value: activeCount, sub:`${State.deals.length} всего в воронке`, cls:''},
+    {label:'Сумма в воронке', value: fmtRub(pipelineSum), sub:'Все активные стадии', cls:'purple'},
+    {label:'Взвешенный прогноз', value: fmtRub(weighted), sub:'С учётом вероятности по стадиям', cls:'success'},
+    {label:'План на месяц', value: monthPct + '%', sub:`Факт: ${fmtRub(progress.month.actual)} / ${fmtRub(progress.month.plan)}`, cls: monthPct >= 100 ? 'success' : monthPct >= 50 ? 'warning' : 'danger'},
+  ];
+  document.getElementById('kpiGrid').innerHTML = kpiData.map(k=>`
+    <div class="kpi-card ${k.cls}">
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value">${k.value}</div>
+      <div class="kpi-sub">${k.sub}</div>
+    </div>
+  `).join('');
+
+  // Summary
+  document.getElementById('summaryBox').innerHTML = `
+    <div class="summary-box-title">Автосаммари</div>
+    <div class="summary-box-text">${getAutoSummary()}</div>
+  `;
+
+  // Mini funnel
+  const funnel = getFunnelData(State.deals);
+  const maxSum = Math.max(...funnel.map(f=>f.sum), 1);
+  document.getElementById('funnelBadge').textContent = `${activeCount} активных`;
+  document.getElementById('dashFunnel').innerHTML = funnel.filter(f=>f.active).map(f=>`
+    <div class="funnel-row">
+      <div class="funnel-stage-name" style="color:${f.color}">${f.short}</div>
+      <div class="funnel-bar-wrap">
+        <div class="funnel-bar" style="width:${Math.max(f.sum/maxSum*100,2)}%;background:${f.color}">${f.count > 0 ? f.count : ''}</div>
+      </div>
+      <div class="funnel-meta">
+        <span class="count">${f.count}</span>
+        <span class="sum">${fmtRub(f.sum)}</span>
+      </div>
+    </div>
+  `).join('');
+
+  // Forecast
+  const forecast = getMonthlyForecast();
+  const months = getMonthsRange(3);
+  const maxForecast = Math.max(...months.map(m=>forecast[m]?.weighted||0), 1);
+  let forecastHtml = '<div class="month-bar">';
+  months.forEach(m=>{
+    const v = forecast[m]?.weighted || 0;
+    const h = v / maxForecast * 100;
+    forecastHtml += `
+      <div class="month-col">
+        <div class="month-value">${v > 0 ? fmtRub(v) : '—'}</div>
+        <div class="month-bar-fill" style="height:${h}%;background:${v > 0 ? 'var(--primary)' : 'var(--border)'}" title="${formatMonth(m)}: ${fmtRubFull(v)}"></div>
+        <div class="month-label">${formatMonth(m)}</div>
+        <div class="small muted">${forecast[m]?.count || 0} сделок</div>
+      </div>
+    `;
+  });
+  forecastHtml += '</div>';
+  document.getElementById('dashForecast').innerHTML = forecastHtml;
+
+  // Top alerts
+  const flags = getRedFlags();
+  const topFlags = flags.slice(0,5);
+  document.getElementById('dashAlerts').innerHTML = topFlags.length ? topFlags.map(f=>`
+    <div class="alert ${f.type}">
+      <div class="alert-icon">!</div>
+      <div class="alert-body">
+        <div class="alert-title">${f.text}</div>
+        <div class="alert-text">${f.action} • ${f.responsible} • ${fmtRub(f.amount)}</div>
+      </div>
+    </div>
+  `).join('') : '<p class="muted center">Нет критических флагов</p>';
+
+  // Recent changes
+  const changes = getChanges();
+  const allChanges = [
+    ...changes.stageUp.map(c=>({type:'up', text:c.deal.client||c.deal.title, from:c.from, to:c.to})),
+    ...changes.stageDown.map(c=>({type:'down', text:c.deal.client||c.deal.title, from:c.from, to:c.to})),
+    ...changes.newDeals.map(d=>({type:'new', text:d.client||d.title, from:null, to:d.stage})),
+    ...changes.lostDeals.map(c=>({type:'lost', text:c.deal.client||c.deal.title, from:c.from, to:c.to})),
+  ].slice(0,10);
+  document.getElementById('dashChanges').innerHTML = allChanges.length ? allChanges.map(c=>{
+    const icon = {up:'&uarr;',down:'&darr;',new:'+',lost:'&times;'}[c.type];
+    return `
+      <div class="change-item ${c.type}">
+        <span class="change-arrow">${icon}</span>
+        <span class="bold">${c.text}</span>
+        ${c.from ? `<span class="change-stage" style="background:${STAGES[getStageIndex(c.from)]?.color||'#999'};color:#fff">${STAGES[getStageIndex(c.from)]?.short||c.from}</span>` : ''}
+        &rarr;
+        ${c.to ? `<span class="change-stage" style="background:${STAGES[getStageIndex(c.to)]?.color||'#999'};color:#fff">${STAGES[getStageIndex(c.to)]?.short||c.to}</span>` : ''}
+      </div>
+    `;
+  }).join('') : '<p class="muted center">Нет изменений с последней выгрузки</p>';
+
+  // Fridge summary on dashboard
+  const fridgeDeals = getFridgeDeals();
+  const fridgeSum = fridgeDeals.reduce((a,d)=>a+(d.amount||0), 0);
+  const fridgeByStage = getFridgeByStage();
+  document.getElementById('dashFridgeBadge').textContent = `${fridgeDeals.length} клиентов`;
+  document.getElementById('dashFridge').innerHTML = `
+    <div class="flex gap-20 flex-wrap mb-12">
+      <div class="pill red">${fridgeDeals.length} клиентов в холодильнике</div>
+      <div class="pill gray">Сумма: ${fmtRub(fridgeSum)}</div>
+    </div>
+    <table>
+      <thead>
+        <tr><th>С какой стадии</th><th>Кол-во</th><th>Сумма</th></tr>
+      </thead>
+      <tbody>
+        ${fridgeByStage.slice(0,5).map(g=>`
+          <tr>
+            <td><span class="tag tag-stage" style="background:${g.stage.color};color:#fff">${g.stage.short}</span></td>
+            <td class="bold">${g.count}</td>
+            <td class="right">${fmtRub(g.sum)}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+    <p class="small mt-12"><a href="#" onclick="navigate('fridge');return false" style="color:var(--primary)">Подробный анализ холодильника &rarr;</a></p>
+  `;
+}
+
+// ============================================================
+// RENDER: FUNNEL
+// ============================================================
+let funnelActiveStage = null;
+
+function renderFunnel(){
+  // Filters
+  const managers = getManagers();
+  const sources = getSources();
+  const mgrSelect = document.getElementById('funnelManager');
+  const srcSelect = document.getElementById('funnelSource');
+  mgrSelect.innerHTML = '<option value="all">Все менеджеры</option>' + managers.map(m=>`<option value="${m}">${m}</option>`).join('');
+  srcSelect.innerHTML = '<option value="all">Все источники</option>' + sources.map(s=>`<option value="${s}">${s}</option>`).join('');
+  const filter = { manager: mgrSelect.value || 'all', source: srcSelect.value || 'all' };
+
+  // Funnel chart
+  const funnel = getFunnelData(State.deals, filter);
+  const maxSum = Math.max(...funnel.map(f=>f.sum), 1);
+  const activeCount = funnel.filter(f=>f.active).reduce((a,f)=>a+f.count, 0);
+  document.getElementById('funnelChart').innerHTML = funnel.map(f=>`
+    <div class="funnel-row" onclick="setFunnelStage('${f.id}')">
+      <div class="funnel-stage-name" style="color:${f.color};cursor:pointer">${f.short}</div>
+      <div class="funnel-bar-wrap">
+        <div class="funnel-bar" style="width:${Math.max(f.sum/maxSum*100,2)}%;background:${f.color}">${f.count > 0 ? f.count + ' — ' + fmtRub(f.sum) : ''}</div>
+      </div>
+      <div class="funnel-meta">
+        <span class="count">${f.count}</span>
+        <span class="sum">${fmtRub(f.sum)}</span>
+      </div>
+    </div>
+  `).join('');
+
+  // Conversion table
+  const conv = getConversionData(filter);
+  document.getElementById('conversionTable').innerHTML = `
+    <table>
+      <thead>
+        <tr><th>Переход</th><th>На стадии</th><th>Прошли дальше</th><th>Конверсия (снапшот)</th><th>Недавно ушли</th><th>Из них прогресс</th><th>Из них отвал</th><th>Конверсия (недав.)</th></tr>
+      </thead>
+      <tbody>
+        ${conv.map(c=>{
+          const cls = c.conversion >= 60 ? 'good' : c.conversion >= 30 ? 'mid' : 'bad';
+          const recentCls = c.recentCount > 0 ? (c.recentConv >= 60 ? 'good' : c.recentConv >= 30 ? 'mid' : 'bad') : 'mid';
+          return `
+            <tr>
+              <td>${c.from.short} &rarr; ${c.to.short}</td>
+              <td>${c.dropOff}</td>
+              <td>${c.to.count}</td>
+              <td><span class="funnel-conversion ${cls}">${fmtPct(c.conversion)}</span></td>
+              <td>${c.recentCount}</td>
+              <td class="bold" style="color:var(--success)">${c.recentProgress}</td>
+              <td class="bold" style="color:var(--danger)">${c.recentLost}</td>
+              <td>${c.recentCount > 0 ? `<span class="funnel-conversion ${recentCls}">${fmtPct(c.recentConv)}</span>` : '—'}</td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
+    <p class="small muted mt-12">Конверсия (снапшот) — доля сделок, прошедших стадию, от всех достигших её. Конверсия (недав.) — по полю «Предыдущая стадия»: сколько сделок недавно ушли со стадии и куда.</p>
+  `;
+
+  // Stage tabs
+  const tabsHtml = funnel.filter(f=>f.count > 0).map(f=>`
+    <div class="sub-tab ${funnelActiveStage === f.id ? 'active' : ''}" onclick="setFunnelStage('${f.id}')">${f.short} (${f.count})</div>
+  `).join('');
+  document.getElementById('funnelStageTabs').innerHTML = tabsHtml;
+  if(!funnelActiveStage || !funnel.find(f=>f.id===funnelActiveStage && f.count > 0)){
+    const first = funnel.find(f=>f.count > 0);
+    funnelActiveStage = first ? first.id : null;
+  }
+  renderFunnelDeals(filter);
+}
+
+function setFunnelStage(stageId){
+  funnelActiveStage = stageId;
+  renderFunnel();
+}
+
+function renderFunnelDeals(filter){
+  let deals = State.deals.filter(d=>d.stage === funnelActiveStage);
+  if(filter){
+    if(filter.manager && filter.manager !== 'all') deals = deals.filter(d=>d.responsible === filter.manager);
+    if(filter.source && filter.source !== 'all') deals = deals.filter(d=>d.source === filter.source);
+  }
+  deals.sort((a,b)=>(b.amount||0) - (a.amount||0));
+  const stageInfo = STAGES.find(s=>s.id===funnelActiveStage);
+  document.getElementById('funnelDealsBadge').textContent = `${deals.length} сделок`;
+  
+  const html = deals.length ? `
+    <table>
+      <thead>
+        <tr><th>Клиент</th><th>Категория</th><th>Источник</th><th>Менеджер</th><th>Сумма</th><th>Дней на стадии</th></tr>
+      </thead>
+      <tbody>
+        ${deals.map(d=>{
+          const days = daysSince(d.stageModifiedDate);
+          const overThreshold = stageInfo && stageInfo.threshold && days > stageInfo.threshold;
+          return `
+            <tr>
+              <td class="bold">${d.client || d.title}</td>
+              <td>${d.category ? `<span class="tag tag-category">${d.category}</span>` : '—'}</td>
+              <td>${d.source ? `<span class="tag tag-source">${d.source}</span>` : '—'}</td>
+              <td>${d.responsible || '—'}</td>
+              <td class="right bold">${fmtRub(d.amount)}</td>
+              <td class="${overThreshold ? 'bold' : 'muted'}" style="color:${overThreshold ? 'var(--danger)' : 'inherit'}">${days}</td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
+  ` : '<p class="muted center">Нет сделок на этой стадии</p>';
+  document.getElementById('funnelDealsTable').innerHTML = html;
+}
+
+// ============================================================
+// RENDER: PAYMENT CALENDAR
+// ============================================================
+function renderCalendar(){
+  const cal = getPaymentCalendar();
+  const active = cal.filter(d=>!d.excluded);
+  const totalWeighted = active.reduce((a,d)=>a + d.amount * d.prob / 100, 0);
+  const totalUnweighted = active.reduce((a,d)=>a + d.amount, 0);
+
+  document.getElementById('calBadge').textContent = `${active.length} сделок`;
+  document.getElementById('calTotalCount').textContent = `${active.length} сделок в календаре`;
+  document.getElementById('calWeighted').textContent = `Взвешенный прогноз: ${fmtRub(totalWeighted)}`;
+  document.getElementById('calUnweighted').textContent = `Невзвешенная сумма: ${fmtRub(totalUnweighted)}`;
+
+  // Sort by payment month (nulls last), then by amount desc
+  active.sort((a,b)=>{
+    if(!a.paymentMonth && !b.paymentMonth) return 0;
+    if(!a.paymentMonth) return 1;
+    if(!b.paymentMonth) return -1;
+    if(a.paymentMonth !== b.paymentMonth) return a.paymentMonth.localeCompare(b.paymentMonth);
+    return (b.amount||0) - (a.amount||0);
+  });
+
+  const months = getMonthsRange(12).concat(['manual-' + Date.now()]); // for dropdown
+  const monthOptions = getMonthsRange(12).map(m=>`<option value="${m}">${formatMonth(m)}</option>`).join('');
+
+  const html = `
+    <table>
+      <thead>
+        <tr>
+          <th>Клиент</th><th>Категория</th><th>Стадия</th><th>Сумма, ₽</th><th>Вер., %</th><th>Месяц оплаты</th><th>Взвеш., ₽</th><th>Прим.</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        ${active.map(d=>{
+          const weighted = d.amount * d.prob / 100;
+          return `
+            <tr>
+              <td class="bold">${d.client || d.title}</td>
+              <td>${d.category ? `<span class="tag tag-category">${d.category}</span>` : '—'}</td>
+              <td><span class="tag tag-stage" style="background:${STAGES[getStageIndex(d.stage)]?.color||'#999'}">${STAGES[getStageIndex(d.stage)]?.short||d.stage}</span></td>
+              <td class="right editable" onclick="editCell('${d.id}','amount',this)">${(d.amount||0).toLocaleString('ru-RU')}</td>
+              <td class="center editable" onclick="editCell('${d.id}','prob',this)">${d.prob}%</td>
+              <td class="center editable" onclick="editCell('${d.id}','paymentMonth',this)">${d.paymentMonth ? formatMonth(d.paymentMonth) : '—'}</td>
+              <td class="right bold">${Math.round(weighted).toLocaleString('ru-RU')}</td>
+              <td class="editable" onclick="editCell('${d.id}','note',this)">${d.note || '<span class="muted">+ добавить</span>'}</td>
+              <td><button class="btn btn-secondary btn-icon btn-sm" onclick="excludeDeal('${d.id}')" title="Убрать из календаря">&times;</button></td>
+            </tr>
+          `;
+        }).join('')}
+        ${cal.filter(d=>d.excluded).map(d=>`
+          <tr style="opacity:.5">
+            <td>${d.client || d.title}</td>
+            <td>—</td>
+            <td>${STAGES[getStageIndex(d.stage)]?.short||d.stage}</td>
+            <td class="right">${(d.amount||0).toLocaleString('ru-RU')}</td>
+            <td>—</td><td>исключён</td><td>—</td><td>—</td>
+            <td><button class="btn btn-secondary btn-icon btn-sm" onclick="includeDeal('${d.id}')" title="Вернуть в календарь">+</button></td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+  document.getElementById('calTable').innerHTML = html;
+
+  // Monthly forecast chart
+  const forecast = getMonthlyForecast();
+  const months6 = getMonthsRange(6);
+  const maxVal = Math.max(...months6.map(m=>forecast[m]?.weighted||0), 1);
+  let fhtml = '<div class="month-bar">';
+  months6.forEach(m=>{
+    const w = forecast[m]?.weighted || 0;
+    const u = forecast[m]?.unweighted || 0;
+    const h = w / maxVal * 100;
+    fhtml += `
+      <div class="month-col">
+        <div class="small bold">${w > 0 ? fmtRub(w) : ''}</div>
+        <div class="month-bar-fill" style="height:${h}%;background:var(--primary)" title="${formatMonth(m)}: взвеш. ${fmtRubFull(w)}, невзвеш. ${fmtRubFull(u)}, ${forecast[m]?.count||0} сделок"></div>
+        <div class="month-label">${formatMonth(m)}</div>
+        <div class="small muted">${forecast[m]?.count||0} сдел.</div>
+      </div>
+    `;
+  });
+  fhtml += '</div>';
+  fhtml += '<div class="flex gap-12 mt-12 flex-wrap"><span class="pill blue">Взвешенный прогноз</span><span class="pill gray">Невзвешенная сумма</span></div>';
+  document.getElementById('calForecast').innerHTML = fhtml;
+}
+
+function editCell(dealId, field, cell){
+  const cal = getPaymentCalendar();
+  const deal = cal.find(d=>d.id === dealId);
+  if(!deal) return;
+  const override = State.calendarOverrides[dealId] || {};
+  const current = override[field] ?? deal[field];
+
+  cell.classList.add('editing');
+  let input;
+  if(field === 'paymentMonth'){
+    input = document.createElement('select');
+    input.innerHTML = `<option value="">—</option>` + getMonthsRange(12).map(m=>`<option value="${m}" ${current===m?'selected':''}>${formatMonth(m)}</option>`).join('');
+  } else if(field === 'note'){
+    input = document.createElement('input');
+    input.type = 'text';
+    input.value = current || '';
+    input.style.width = '200px';
+  } else if(field === 'prob'){
+    input = document.createElement('input');
+    input.type = 'number';
+    input.min = 0; input.max = 100;
+    input.value = current;
+    input.style.width = '60px';
+  } else if(field === 'amount'){
+    input = document.createElement('input');
+    input.type = 'number';
+    input.value = current;
+    input.style.width = '130px';
+  }
+  cell.innerHTML = '';
+  cell.appendChild(input);
+  input.focus();
+  if(input.select) input.select();
+
+  const save = ()=>{
+    let val = input.value;
+    if(field === 'amount' || field === 'prob') val = parseFloat(val) || 0;
+    if(!override) override = {};
+    if(!State.calendarOverrides[dealId]) State.calendarOverrides[dealId] = {};
+    State.calendarOverrides[dealId][field] = val;
+    saveState();
+    renderCalendar();
+    renderDashboard();
+  };
+
+  input.addEventListener('blur', save);
+  input.addEventListener('keydown', e=>{
+    if(e.key === 'Enter') input.blur();
+    if(e.key === 'Escape'){ cell.classList.remove('editing'); renderCalendar(); }
+  });
+}
+
+function excludeDeal(dealId){
+  if(!State.calendarOverrides[dealId]) State.calendarOverrides[dealId] = {};
+  State.calendarOverrides[dealId].excluded = true;
+  saveState();
+  renderCalendar();
+  renderDashboard();
+}
+
+function includeDeal(dealId){
+  if(!State.calendarOverrides[dealId]) State.calendarOverrides[dealId] = {};
+  delete State.calendarOverrides[dealId].excluded;
+  saveState();
+  renderCalendar();
+  renderDashboard();
+}
+
+// ============================================================
+// RENDER: PLAN
+// ============================================================
+let planTab = 'month';
+
+function switchPlanTab(tab){
+  planTab = tab;
+  document.querySelectorAll('[data-ptab]').forEach(el=>{
+    el.classList.toggle('active', el.dataset.ptab === tab);
+  });
+  renderPlan();
+}
+
+function renderPlan(){
+  const progress = getPlanProgress();
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  let html = '';
+
+  if(planTab === 'month'){
+    // Show 6 months: 3 past + current + 2 future
+    const months = [];
+    for(let i = -3; i <= 5; i++){
+      const d = new Date(y, m+i, 1);
+      months.push(d.toISOString().substring(0,7));
+    }
+    html = `
+      <table>
+        <thead>
+          <tr><th>Месяц</th><th>План, ₽</th><th>Факт, ₽</th><th>Прогноз, ₽</th><th>Выполнение</th><th>С прогнозом</th></tr>
+        </thead>
+        <tbody>
+          ${months.map(mk=>{
+            const plan = State.salesPlan.monthly[mk] || 0;
+            const actual = getActualForPeriod(mk);
+            const forecast = getMonthlyForecast()[mk]?.weighted || 0;
+            const pct = plan > 0 ? Math.round(actual/plan*100) : 0;
+            const fctPct = plan > 0 ? Math.round((actual+forecast)/plan*100) : 0;
+            const isCurrent = mk === `${y}-${String(m+1).padStart(2,'0')}`;
+            return `
+              <tr ${isCurrent ? 'style="background:var(--primary-light)"' : ''}>
+                <td class="bold">${formatMonth(mk)}${isCurrent ? ' &larr;текущ.' : ''}</td>
+                <td><input type="number" class="input-money" value="${plan||''}" onchange="updatePlan('monthly','${mk}',this.value)" placeholder="0"></td>
+                <td class="right">${actual > 0 ? fmtRubFull(actual) : '—'}</td>
+                <td class="right muted">${forecast > 0 ? fmtRub(forecast) : '—'}</td>
+                <td>
+                  <div class="progress-bar"><div class="progress-fill" style="width:${Math.min(pct,100)}%;background:${pct>=100?'var(--success)':pct>=50?'var(--warning)':'var(--danger)'}"></div></div>
+                  <span class="small ${pct>=100?'':pct>=50?'':'bold'}" style="color:${pct>=100?'var(--success)':pct>=50?'var(--text-muted)':'var(--danger)'}">${pct}%</span>
+                </td>
+                <td class="small bold" style="color:${fctPct>=100?'var(--success)':'var(--text)'}">${fctPct}%</td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    `;
+  } else if(planTab === 'quarter'){
+    const quarters = [];
+    for(let i = -2; i <= 2; i++){
+      const q = Math.ceil((m+1)/3) + i;
+      const qy = q <= 0 ? y - 1 : q > 4 ? y + 1 : y;
+      const qNum = ((q - 1) % 4 + 4) % 4 + 1;
+      quarters.push(`${qy}-Q${qNum}`);
+    }
+    html = `
+      <table>
+        <thead>
+          <tr><th>Квартал</th><th>План, ₽</th><th>Факт, ₽</th><th>Прогноз, ₽</th><th>Выполнение</th><th>С прогнозом</th></tr>
+        </thead>
+        <tbody>
+          ${quarters.map(qk=>{
+            const plan = State.salesPlan.quarterly[qk] || 0;
+            const actual = getActualForQuarter(qk);
+            const qMonths = getQuarterMonths(qk);
+            const forecast = qMonths.reduce((a,mk)=>a + (getMonthlyForecast()[mk]?.weighted || 0), 0);
+            const pct = plan > 0 ? Math.round(actual/plan*100) : 0;
+            const fctPct = plan > 0 ? Math.round((actual+forecast)/plan*100) : 0;
+            const isCurrent = qk === `${y}-Q${Math.ceil((m+1)/3)}`;
+            return `
+              <tr ${isCurrent ? 'style="background:var(--primary-light)"' : ''}>
+                <td class="bold">${formatQuarter(qk)}${isCurrent ? ' &larr;текущ.' : ''}</td>
+                <td><input type="number" class="input-money" value="${plan||''}" onchange="updatePlan('quarterly','${qk}',this.value)" placeholder="0"></td>
+                <td class="right">${actual > 0 ? fmtRubFull(actual) : '—'}</td>
+                <td class="right muted">${forecast > 0 ? fmtRub(forecast) : '—'}</td>
+                <td>
+                  <div class="progress-bar"><div class="progress-fill" style="width:${Math.min(pct,100)}%;background:${pct>=100?'var(--success)':pct>=50?'var(--warning)':'var(--danger)'}"></div></div>
+                  <span class="small" style="color:${pct>=100?'var(--success)':'var(--text)'}">${pct}%</span>
+                </td>
+                <td class="small bold" style="color:${fctPct>=100?'var(--success)':'var(--text)'}">${fctPct}%</td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    `;
+  } else if(planTab === 'year'){
+    const years = [y-1, y, y+1];
+    html = `
+      <table>
+        <thead>
+          <tr><th>Год</th><th>План, ₽</th><th>Факт, ₽</th><th>Прогноз, ₽</th><th>Выполнение</th><th>С прогнозом</th></tr>
+        </thead>
+        <tbody>
+          ${years.map(yk=>{
+            const plan = State.salesPlan.annual[yk.toString()] || 0;
+            const actual = getActualForPeriod(yk.toString());
+            const yearMonths = [];
+            for(let mo=1; mo<=12; mo++) yearMonths.push(`${yk}-${String(mo).padStart(2,'0')}`);
+            const forecast = yearMonths.reduce((a,mk)=>a + (getMonthlyForecast()[mk]?.weighted || 0), 0);
+            const pct = plan > 0 ? Math.round(actual/plan*100) : 0;
+            const fctPct = plan > 0 ? Math.round((actual+forecast)/plan*100) : 0;
+            const isCurrent = yk === y;
+            return `
+              <tr ${isCurrent ? 'style="background:var(--primary-light)"' : ''}>
+                <td class="bold">${yk}${isCurrent ? ' &larr;текущ.' : ''}</td>
+                <td><input type="number" class="input-money" value="${plan||''}" onchange="updatePlan('annual','${yk}',this.value)" placeholder="0"></td>
+                <td class="right">${actual > 0 ? fmtRubFull(actual) : '—'}</td>
+                <td class="right muted">${forecast > 0 ? fmtRub(forecast) : '—'}</td>
+                <td>
+                  <div class="progress-bar"><div class="progress-fill" style="width:${Math.min(pct,100)}%;background:${pct>=100?'var(--success)':pct>=50?'var(--warning)':'var(--danger)'}"></div></div>
+                  <span class="small" style="color:${pct>=100?'var(--success)':'var(--text)'}">${pct}%</span>
+                </td>
+                <td class="small bold" style="color:${fctPct>=100?'var(--success)':'var(--text)'}">${fctPct}%</td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    `;
+  }
+  document.getElementById('planContent').innerHTML = html;
+}
+
+function updatePlan(type, key, value){
+  const num = parseFloat(value) || 0;
+  if(!State.salesPlan[type]) State.salesPlan[type] = {};
+  if(num === 0) delete State.salesPlan[type][key];
+  else State.salesPlan[type][key] = num;
+  saveState();
+  renderPlan();
+  renderDashboard();
+}
+
+// ============================================================
+// RENDER: SOURCES
+// ============================================================
+function renderSources(){
+  const sources = getSourceAnalysis();
+  
+  // Table
+  document.getElementById('sourceTable').innerHTML = `
+    <table>
+      <thead>
+        <tr><th>Источник</th><th>Всего сделок</th><th>Сумма, ₽</th><th>Средний чек</th><th>Активных</th><th>Выиграно</th><th>Конверсия в выигрыш</th></tr>
+      </thead>
+      <tbody>
+        ${sources.map(s=>{
+          const wonPct = s.count > 0 ? Math.round(s.wonCount / s.count * 100) : 0;
+          return `
+            <tr>
+              <td><span class="tag tag-source">${s.source}</span></td>
+              <td class="bold">${s.count}</td>
+              <td class="right bold">${fmtRub(s.sum)}</td>
+              <td class="right">${fmtRub(s.count > 0 ? s.sum / s.count : 0)}</td>
+              <td>${s.activeCount}</td>
+              <td>${s.wonCount} (${fmtRub(s.wonSum)})</td>
+              <td><span class="funnel-conversion ${wonPct>=30?'good':wonPct>=10?'mid':'bad'}">${wonPct}%</span></td>
+            </tr>
+          `;
+        }).join('')}
+        ${sources.length === 0 ? '<tr><td colspan="7" class="center muted">Нет данных по источникам. Убедитесь, что названия сделок содержат формат «Клиент_Категория (источник)».</td></tr>' : ''}
+      </tbody>
+    </table>
+  `;
+
+  // Bar chart
+  const maxSum = Math.max(...sources.map(s=>s.sum), 1);
+  document.getElementById('sourceChart').innerHTML = `
+    <div class="chart-bar">
+      ${sources.map(s=>`
+        <div class="bar-row">
+          <div class="bar-label">${s.source}</div>
+          <div class="bar-track">
+            <div class="bar-fill" style="width:${Math.max(s.sum/maxSum*100,2)}%;background:var(--purple)">${fmtRub(s.sum)}</div>
+          </div>
+          <div class="bar-value">${s.count} сделок</div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+
+  // ROI analysis
+  const sortedByValue = [...sources].sort((a,b)=>(b.sum/b.count) - (a.sum/a.count));
+  const sortedBySpeed = [...sources].map(s=>{
+    const won = s.deals.filter(d=>STAGE_INDEX[d.stage] >= 6);
+    let avgDays = 0;
+    if(won.length){
+      const totalDays = won.reduce((a,d)=>{
+        const start = d.createdDate ? new Date(d.createdDate) : null;
+        const end = d.stageModifiedDate ? new Date(d.stageModifiedDate) : null;
+        if(start && end) return a + (end - start) / 86400000;
+        return a;
+      }, 0);
+      avgDays = totalDays / won.length;
+    }
+    return { ...s, avgDays, wonCount: won.length };
+  }).filter(s=>s.wonCount > 0).sort((a,b)=>a.avgDays - b.avgDays);
+
+  document.getElementById('sourceRoi').innerHTML = `
+    <div class="grid-2">
+      <div>
+        <h4 class="mb-12" style="font-size:14px;font-weight:600">Самые дорогие сделки (средний чек)</h4>
+        <div class="chart-bar">
+          ${sortedByValue.slice(0,8).map(s=>`
+            <div class="bar-row">
+              <div class="bar-label">${s.source}</div>
+              <div class="bar-track">
+                <div class="bar-fill" style="width:${Math.max((s.sum/s.count)/ (sortedByValue[0].sum/sortedByValue[0].count) *100, 2)}%;background:var(--success)">${fmtRub(s.sum/s.count)}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      <div>
+        <h4 class="mb-12" style="font-size:14px;font-weight:600">Самые быстрые сделки (дни до выигрыша)</h4>
+        ${sortedBySpeed.length ? `
+          <div class="chart-bar">
+            ${sortedBySpeed.map(s=>`
+              <div class="bar-row">
+                <div class="bar-label">${s.source}</div>
+                <div class="bar-track">
+                  <div class="bar-fill" style="width:${Math.max(100 - s.avgDays, 5)}%;background:var(--primary)">${Math.round(s.avgDays)} дн.</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        ` : '<p class="muted">Нет завершённых сделок для расчёта скорости</p>'}
+      </div>
+    </div>
+  `;
+}
+
+// ============================================================
+// RENDER: RECOMMENDATIONS
+// ============================================================
+function renderRecommendations(){
+  // Summary
+  document.getElementById('recSummary').innerHTML = `
+    <div class="summary-box-title">Автосаммари по итогам обновления</div>
+    <div class="summary-box-text">${getAutoSummary()}</div>
+  `;
+
+  // Red flags
+  const flags = getRedFlags();
+  document.getElementById('redFlagsBadge').textContent = flags.length;
+  document.getElementById('recRedFlags').innerHTML = flags.length ? flags.map(f=>`
+    <div class="alert ${f.type}">
+      <div class="alert-icon">!</div>
+      <div class="alert-body">
+        <div class="alert-title">${f.text} — ${f.action}</div>
+        <div class="alert-text">Менеджер: ${f.responsible} • Сумма: ${fmtRub(f.amount)} • Порог: ${f.stageThreshold} дн.</div>
+      </div>
+    </div>
+  `).join('') : '<p class="muted center">Нет красных флагов</p>';
+
+  // Priority actions
+  const actions = getPriorityActions();
+  document.getElementById('priorityBadge').textContent = actions.length;
+  document.getElementById('recPriority').innerHTML = actions.length ? actions.map(a=>`
+    <div class="alert ${a.type}">
+      <div class="alert-icon">&#9650;</div>
+      <div class="alert-body">
+        <div class="alert-title">${a.text}</div>
+        <div class="alert-text">Сумма: ${fmtRub(a.amount)} • Действие: ${a.action}</div>
+      </div>
+    </div>
+  `).join('') : '<p class="muted center">Нет срочных приоритетных действий</p>';
+
+  // Conversion hints
+  const hints = getConversionHints();
+  document.getElementById('recConversion').innerHTML = hints.length ? hints.map(h=>`
+    <div class="alert ${h.isMain ? 'danger' : 'warning'}">
+      <div class="alert-icon">&#9888;</div>
+      <div class="alert-body">
+        <div class="alert-title">${h.text}</div>
+        <div class="alert-text">${h.action}</div>
+      </div>
+    </div>
+  `).join('') : '<p class="muted center">Конверсия в норме</p>';
+
+  // Manager actions
+  const mgrs = getManagerActions();
+  document.getElementById('recManagers').innerHTML = `
+    <table>
+      <thead>
+        <tr><th>Менеджер</th><th>Активных сделок</th><th>Зависших</th><th>Дедлайны близко</th><th>Действие</th></tr>
+      </thead>
+      <tbody>
+        ${mgrs.map(m=>{
+          const action = m.stuckCount > 0 ? `Просмотреть ${m.stuckCount} зависших сделок` : m.deadlineCount > 0 ? `Проверить ${m.deadlineCount} сделок с близким дедлайном` : 'Без срочных действий';
+          return `
+            <tr>
+              <td class="bold">${m.name}</td>
+              <td>${m.totalActive}</td>
+              <td>${m.stuckCount > 0 ? `<span class="pill red">${m.stuckCount}</span>` : '<span class="pill green">0</span>'}</td>
+              <td>${m.deadlineCount > 0 ? `<span class="pill yellow">${m.deadlineCount}</span>` : '<span class="pill green">0</span>'}</td>
+              <td class="small">${action}</td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+// ============================================================
+// RENDER: CHANGES
+// ============================================================
+let changeTab = 'stage';
+
+function switchChangeTab(tab){
+  changeTab = tab;
+  document.querySelectorAll('[data-ctab]').forEach(el=>{
+    el.classList.toggle('active', el.dataset.ctab === tab);
+  });
+  renderChanges();
+}
+
+function renderChanges(){
+  if(!State.previousDeals.length){
+    document.getElementById('changeContent').innerHTML = '<p class="muted center">Изменения отобразятся после второй выгрузки. Загрузите новый CSV — он сравнится с предыдущим автоматически.</p>';
+    document.getElementById('changesBadge').textContent = 'первая выгрузка';
+    return;
+  }
+  const changes = getChanges();
+  const total = changes.stageUp.length + changes.stageDown.length + changes.newDeals.length + changes.lostDeals.length + changes.sumChanges.length;
+  document.getElementById('changesBadge').textContent = `${total} изм.`;
+
+  let html = '';
+  if(changeTab === 'stage'){
+    html = `
+      <h4 class="mb-12" style="font-size:14px;font-weight:600;color:var(--success)">&uarr; Переход на более позднюю стадию (${changes.stageUp.length})</h4>
+      ${changes.stageUp.map(c=>changeItemHtml('up', c.deal, c.from, c.to)).join('') || '<p class="muted small">Нет переходов вверх</p>'}
+      <div class="divider"></div>
+      <h4 class="mb-12" style="font-size:14px;font-weight:600;color:var(--danger)">&darr; Откат на более раннюю стадию (${changes.stageDown.length})</h4>
+      ${changes.stageDown.map(c=>changeItemHtml('down', c.deal, c.from, c.to)).join('') || '<p class="muted small">Нет переходов вниз</p>'}
+    `;
+  } else if(changeTab === 'sum'){
+    html = changes.sumChanges.length ? changes.sumChanges.map(c=>{
+      const diff = c.diff;
+      const sign = diff > 0 ? '+' : '';
+      return `
+        <div class="change-item sum">
+          <span class="change-arrow">${diff > 0 ? '&#9650;' : '&#9660;'}</span>
+          <span class="bold">${c.deal.client || c.deal.title}</span>
+          <span class="muted">было: ${fmtRubFull(c.oldAmount)}</span>
+          &rarr;
+          <span class="bold">стало: ${fmtRubFull(c.newAmount)}</span>
+          <span class="pill ${diff > 0 ? 'green' : 'red'}">${sign}${fmtRubFull(diff)}</span>
+        </div>
+      `;
+    }).join('') : '<p class="muted center">Нет изменений сумм</p>';
+  } else if(changeTab === 'new'){
+    html = changes.newDeals.length ? changes.newDeals.map(d=>`
+      <div class="change-item new">
+        <span class="change-arrow">+</span>
+        <span class="bold">${d.client || d.title}</span>
+        ${d.category ? `<span class="tag tag-category">${d.category}</span>` : ''}
+        ${d.source ? `<span class="tag tag-source">${d.source}</span>` : ''}
+        <span class="change-stage" style="background:${STAGES[getStageIndex(d.stage)]?.color||'#999'};color:#fff">${STAGES[getStageIndex(d.stage)]?.short||d.stage}</span>
+        <span class="muted">${fmtRub(d.amount)}</span>
+      </div>
+    `).join('') : '<p class="muted center">Нет новых сделок</p>';
+  } else if(changeTab === 'lost'){
+    const saratov = changes.lostDeals.filter(c=>c.to === 'Саратов');
+    const otval = changes.lostDeals.filter(c=>c.to === 'Отвал');
+    const disappeared = changes.lostDeals.filter(c=>c.to === 'исчез');
+    html = `
+      <h4 class="mb-12" style="font-size:14px;font-weight:600;color:var(--danger)">Саратов — клиент пропал/ушёл к конкурентам (${saratov.length})</h4>
+      ${saratov.map(c=>changeItemHtml('down', c.deal, c.from, c.to)).join('') || '<p class="muted small">Нет</p>'}
+      <div class="divider"></div>
+      <h4 class="mb-12" style="font-size:14px;font-weight:600;color:var(--danger)">Отвал — окончательный отказ (${otval.length})</h4>
+      ${otval.map(c=>changeItemHtml('down', c.deal, c.from, c.to)).join('') || '<p class="muted small">Нет</p>'}
+      <div class="divider"></div>
+      <h4 class="mb-12" style="font-size:14px;font-weight:600;color:var(--text-muted)">Исчезли из выгрузки (${disappeared.length})</h4>
+      ${disappeared.map(c=>changeItemHtml('lost', c.deal, c.from, 'исчез')).join('') || '<p class="muted small">Нет</p>'}
+    `;
+  }
+  document.getElementById('changeContent').innerHTML = html;
+}
+
+function changeItemHtml(type, deal, from, to){
+  return `
+    <div class="change-item ${type}">
+      <span class="change-arrow">${type==='up'?'&uarr;':type==='down'?'&darr;':type==='new'?'+':'&times;'}</span>
+      <span class="bold">${deal.client || deal.title}</span>
+      <span class="change-stage" style="background:${STAGES[getStageIndex(from)]?.color||'#999'};color:#fff">${STAGES[getStageIndex(from)]?.short||from}</span>
+      &rarr;
+      <span class="change-stage" style="background:${STAGES[getStageIndex(to)]?.color||'#999'};color:#fff">${STAGES[getStageIndex(to)]?.short||to}</span>
+      <span class="muted">${fmtRub(deal.amount)}</span>
+      ${deal.responsible ? `<span class="small muted">• ${deal.responsible}</span>` : ''}
+    </div>
+  `;
+}
+
+// ============================================================
+// RENDER: FRIDGE (SARATOV)
+// ============================================================
+let fridgeTab = 'all';
+
+function switchFridgeTab(tab){
+  fridgeTab = tab;
+  document.querySelectorAll('[data-ftab]').forEach(el=>{
+    el.classList.toggle('active', el.dataset.ftab === tab);
+  });
+  renderFridgeList();
+}
+
+function getFridgeDeals(){
+  return State.deals.filter(d => d.stage === 'Саратов');
+}
+
+function getFridgeByStage(){
+  const deals = getFridgeDeals();
+  const groups = {};
+  STAGES.forEach(s=>{
+    const stageDeals = deals.filter(d => d.previousStage === s.id);
+    if(stageDeals.length){
+      groups[s.id] = { stage: s, deals: stageDeals, count: stageDeals.length, sum: stageDeals.reduce((a,d)=>a+(d.amount||0),0) };
+    }
+  });
+  // Also group deals with no previousStage
+  const noPrev = deals.filter(d => !d.previousStage);
+  if(noPrev.length){
+    groups['_unknown'] = { stage: {id:'_unknown', short:'Неизвестно', color:'#94a3b8'}, deals: noPrev, count: noPrev.length, sum: noPrev.reduce((a,d)=>a+(d.amount||0),0) };
+  }
+  return Object.values(groups).sort((a,b)=>b.count - a.count);
+}
+
+function getFridgeByCategory(){
+  const deals = getFridgeDeals();
+  const groups = {};
+  deals.forEach(d=>{
+    const cat = d.category || 'Не указана';
+    if(!groups[cat]) groups[cat] = { category: cat, deals: [], count: 0, sum: 0 };
+    groups[cat].deals.push(d);
+    groups[cat].count++;
+    groups[cat].sum += d.amount || 0;
+  });
+  return Object.values(groups).sort((a,b)=>b.count - a.count);
+}
+
+function renderFridge(){
+  const deals = getFridgeDeals();
+  const totalSum = deals.reduce((a,d)=>a+(d.amount||0), 0);
+  const withSum = deals.filter(d=>d.amount > 0);
+  const recent = deals.filter(d=>{
+    const dt = d.stageModifiedDate ? new Date(d.stageModifiedDate) : null;
+    if(!dt) return false;
+    return (Date.now() - dt.getTime()) < 90 * 86400000;
+  });
+
+  // KPI
+  document.getElementById('fridgeKpi').innerHTML = `
+    <div class="kpi-card danger">
+      <div class="kpi-label">Всего в «Холодильнике»</div>
+      <div class="kpi-value">${deals.length}</div>
+      <div class="kpi-sub">клиентов на стадии «Саратов»</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Сумма сделок</div>
+      <div class="kpi-value">${fmtRub(totalSum)}</div>
+      <div class="kpi-sub">${withSum.length} с указанной суммой</div>
+    </div>
+    <div class="kpi-card warning">
+      <div class="kpi-label">Попали за последние 3 мес</div>
+      <div class="kpi-value">${recent.length}</div>
+      <div class="kpi-sub">из ${deals.length} всего</div>
+    </div>
+    <div class="kpi-card purple">
+      <div class="kpi-label">Товарных категорий</div>
+      <div class="kpi-value">${getFridgeByCategory().length}</div>
+      <div class="kpi-sub">затронуто категорий</div>
+    </div>
+  `;
+
+  // By stage
+  const byStage = getFridgeByStage();
+  document.getElementById('fridgeByStage').innerHTML = `
+    <table>
+      <thead>
+        <tr><th>С какой стадии перешли</th><th>Кол-во клиентов</th><th>Сумма, ₽</th><th>Доля</th><th>Визуально</th></tr>
+      </thead>
+      <tbody>
+        ${byStage.map(g=>{
+          const pct = deals.length > 0 ? (g.count / deals.length * 100) : 0;
+          return `
+            <tr>
+              <td><span class="tag tag-stage" style="background:${g.stage.color};color:#fff">${g.stage.short}</span></td>
+              <td class="bold">${g.count}</td>
+              <td class="right">${fmtRub(g.sum)}</td>
+              <td>${fmtPct(pct)}</td>
+              <td><div style="width:120px;height:8px;background:var(--bg);border-radius:4px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${g.stage.color};border-radius:4px"></div></div></td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+
+  // By category
+  const byCat = getFridgeByCategory();
+  const maxCatCount = Math.max(...byCat.map(c=>c.count), 1);
+  document.getElementById('fridgeByCategory').innerHTML = `
+    <table>
+      <thead>
+        <tr><th>Товарная категория</th><th>Кол-во клиентов</th><th>Сумма, ₽</th><th>Доля</th><th>Визуально</th></tr>
+      </thead>
+      <tbody>
+        ${byCat.map(c=>{
+          const pct = deals.length > 0 ? (c.count / deals.length * 100) : 0;
+          return `
+            <tr>
+              <td><span class="tag tag-category">${c.category}</span></td>
+              <td class="bold">${c.count}</td>
+              <td class="right">${fmtRub(c.sum)}</td>
+              <td>${fmtPct(pct)}</td>
+              <td><div style="width:120px;height:8px;background:var(--bg);border-radius:4px;overflow:hidden"><div style="height:100%;width:${pct}%;background:var(--danger);border-radius:4px"></div></div></td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+
+  renderFridgeList();
+}
+
+function renderFridgeList(){
+  let deals = getFridgeDeals();
+  if(fridgeTab === 'withsum') deals = deals.filter(d=>d.amount > 0);
+  if(fridgeTab === 'recent'){
+    deals = deals.filter(d=>{
+      const dt = d.stageModifiedDate ? new Date(d.stageModifiedDate) : null;
+      if(!dt) return false;
+      return (Date.now() - dt.getTime()) < 90 * 86400000;
+    });
+  }
+  deals.sort((a,b)=>{
+    const da = a.stageModifiedDate ? new Date(a.stageModifiedDate).getTime() : 0;
+    const db = b.stageModifiedDate ? new Date(b.stageModifiedDate).getTime() : 0;
+    return db - da;
+  });
+  document.getElementById('fridgeListBadge').textContent = `${deals.length} клиентов`;
+  document.getElementById('fridgeTable').innerHTML = `
+    <table>
+      <thead>
+        <tr><th>Клиент</th><th>Категория</th><th>Источник</th><th>С какой стадии</th><th>Сумма</th><th>Менеджер</th><th>Дата перехода</th><th>Дней в холодильнике</th></tr>
+      </thead>
+      <tbody>
+        ${deals.length ? deals.map(d=>{
+          const prevStageInfo = STAGES.find(s=>s.id === d.previousStage);
+          const days = daysSince(d.stageModifiedDate);
+          return `
+            <tr>
+              <td class="bold">${d.client || d.title}</td>
+              <td>${d.category ? `<span class="tag tag-category">${d.category}</span>` : '—'}</td>
+              <td>${d.source ? `<span class="tag tag-source">${d.source}</span>` : '—'}</td>
+              <td>${prevStageInfo ? `<span class="tag tag-stage" style="background:${prevStageInfo.color};color:#fff">${prevStageInfo.short}</span>` : '<span class="muted">неизвестно</span>'}</td>
+              <td class="right bold">${d.amount > 0 ? fmtRub(d.amount) : '<span class="muted">—</span>'}</td>
+              <td class="small">${d.responsible || '—'}</td>
+              <td class="small">${formatDate(d.stageModifiedDate)}</td>
+              <td class="${days > 180 ? 'bold' : 'muted'}" style="color:${days > 180 ? 'var(--danger)' : 'inherit'}">${days}</td>
+            </tr>
+          `;
+        }).join('') : '<tr><td colspan="8" class="center muted">Нет клиентов в «Холодильнике»</td></tr>'}
+      </tbody>
+    </table>
+  `;
+}
+
+// ============================================================
+// RENDER: SETTINGS
+// ============================================================
+function renderSettings(){
+  // Category normalization
+  const rawCats = getRawCategories();
+  document.getElementById('settingsCategoryNorm').innerHTML = rawCats.length ? `
+    <table>
+      <thead>
+        <tr><th>Как в CSV (сырое название)</th><th>Сопоставлено к</th><th>Сделок</th><th>Переопределить</th></tr>
+      </thead>
+      <tbody>
+        ${rawCats.map(rc=>{
+          const norm = normalizeCategory(rc);
+          const count = State.deals.filter(d=>d.rawCategory === rc).length;
+          const isOverridden = State.categoryOverrides && State.categoryOverrides[rc];
+          const isAuto = norm !== rc;
+          return `
+            <tr ${isOverridden ? 'style="background:var(--warning-light)"' : ''}>
+              <td class="bold">${rc}</td>
+              <td>
+                <span class="pill ${isOverridden ? 'yellow' : isAuto ? 'blue' : 'gray'}">${norm}</span>
+                ${isOverridden ? '<span class="small muted"> (вручную)</span>' : isAuto ? '<span class="small muted"> (авто)</span>' : '<span class="small muted"> (без изменений)</span>'}
+              </td>
+              <td>${count}</td>
+              <td>
+                <select onchange="updateCategoryOverride('${rc.replace(/'/g,"\\'")}', this.value)">
+                  <option value="">Авто: ${normalizeCategory(rc)}</option>
+                  ${CANONICAL_CATEGORIES.map(c=>`<option value="${c}" ${isOverridden && isOverridden===c ? 'selected' : ''}>${c}</option>`).join('')}
+                </select>
+              </td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
+    <p class="small muted mt-12">Жёлтым выделены строки с ручным переопределением. Чтобы вернуть авто-сопоставление — выберите «Авто: ...» в выпадающем списке.</p>
+  ` : '<p class="muted">Категории появятся после загрузки CSV</p>';
+
+  const categories = getCategories();
+  // Category deadlines
+  document.getElementById('settingsCategories').innerHTML = categories.length ? categories.map(cat=>{
+    const deadline = State.categoryDeadlines[cat] || '';
+    const autoPay = deadline ? autoCalcPaymentMonthForCat(cat, deadline) : null;
+    return `
+      <div class="settings-row">
+        <div class="settings-label">${cat}</div>
+        <input type="date" class="input-date" value="${deadline}" onchange="updateCategoryDeadline('${cat}', this.value)">
+        <span class="small muted">${autoPay ? 'Авто-месяц оплаты: ' + formatMonth(autoPay) : 'дедлайн не задан'}</span>
+      </div>
+    `;
+  }).join('') : '<p class="muted">Категории появятся после загрузки CSV</p>';
+  document.getElementById('implMonths').value = State.implMonths;
+
+  // Stage probabilities
+  document.getElementById('settingsProbabilities').innerHTML = PAYMENT_STAGES.map(stage=>{
+    const prob = State.stageProbs[stage] ?? PAYMENT_PROBS[stage];
+    return `
+      <div class="settings-row">
+        <div class="settings-label">${STAGES.find(s=>s.id===stage)?.short || stage}</div>
+        <input type="number" class="input-percent" min="0" max="100" value="${prob}" onchange="updateStageProb('${stage}', this.value)"> %
+      </div>
+    `;
+  }).join('');
+}
+
+function autoCalcPaymentMonthForCat(cat, deadlineStr){
+  const deadline = new Date(deadlineStr);
+  if(isNaN(deadline.getTime())) return null;
+  const payment = new Date(deadline);
+  payment.setMonth(payment.getMonth() - State.implMonths);
+  return payment.toISOString().substring(0,7);
+}
+
+function updateCategoryDeadline(cat, value){
+  if(!value) delete State.categoryDeadlines[cat];
+  else State.categoryDeadlines[cat] = value;
+  saveState();
+  renderSettings();
+  renderCalendar();
+  renderDashboard();
+}
+
+function updateCategoryOverride(rawCat, value){
+  if(!State.categoryOverrides) State.categoryOverrides = {};
+  if(!value){
+    delete State.categoryOverrides[rawCat];
+  } else {
+    State.categoryOverrides[rawCat] = value;
+  }
+  // Re-process deals to apply new normalization
+  State.deals = State.deals.map(d => ({
+    ...d,
+    category: normalizeCategory(d.rawCategory || ''),
+  }));
+  saveState();
+  renderSettings();
+  renderCalendar();
+  renderDashboard();
+  renderFridge();
+}
+
+function updateStageProb(stage, value){
+  const num = parseInt(value) || 0;
+  State.stageProbs[stage] = num;
+  saveState();
+  renderSettings();
+  renderCalendar();
+  renderDashboard();
+}
+
+function saveSettings(){
+  State.implMonths = parseInt(document.getElementById('implMonths').value) || 2;
+  saveState();
+  renderSettings();
+  renderCalendar();
+  renderDashboard();
+}
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+const viewTitles = {
+  dashboard:'Дашборд', funnel:'Воронка продаж', fridge:'Холодильник (Саратов)',
+  calendar:'Платёжный календарь', plan:'План продаж', sources:'Источники лидов',
+  recommendations:'Рекомендации', changes:'Изменения', settings:'Настройки',
+};
+
+function navigate(view){
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+  document.getElementById('view-' + view).classList.add('active');
+  document.querySelector(`.nav-item[data-view="${view}"]`).classList.add('active');
+  document.getElementById('topbarTitle').textContent = viewTitles[view] || view;
+
+  switch(view){
+    case 'dashboard': renderDashboard(); break;
+    case 'funnel': renderFunnel(); break;
+    case 'fridge': renderFridge(); break;
+    case 'calendar': renderCalendar(); break;
+    case 'plan': renderPlan(); break;
+    case 'sources': renderSources(); break;
+    case 'recommendations': renderRecommendations(); break;
+    case 'changes': renderChanges(); break;
+    case 'settings': renderSettings(); break;
+  }
+}
+
+// ============================================================
+// CSV UPLOAD
+// ============================================================
+function handleCSVFile(file){
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    let text = e.target.result;
+    // Handle BOM
+    if(text.charCodeAt(0) === 0xFEFF) text = text.substring(1);
+    // Check if encoding is wrong (common with Windows-1251 files read as UTF-8)
+    if(text.includes('\uFFFD') || !text.includes('Продажа') && !text.includes('Стадия') && text.includes('\u00d0')){
+      // Try Windows-1251
+      const reader2 = new FileReader();
+      reader2.onload = (e2)=>{
+        let text2 = e2.target.result;
+        if(text2.charCodeAt(0) === 0xFEFF) text2 = text2.substring(1);
+        processCSVText(text2);
+      };
+      reader2.readAsText(file, 'windows-1251');
+      return;
+    }
+    processCSVText(text);
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function processCSVText(text){
+  const rows = parseCSV(text);
+  if(!rows.length){
+    alert('Не удалось разобрать CSV. Проверьте формат файла.');
+    return;
+  }
+  const deals = processDeals(rows);
+  if(!deals.length){
+    alert('В файле не найдено сделок. Проверьте формат колонок.\n\nОжидаются колонки: Тип;Стадия сделки;Валюта;Ответственный;Дата создания;Предыдущая стадия;Название сделки;Сумма;Дата изменения;Дата начала;Кто изменил стадию;Дата изменения стадии;ID');
+    return;
+  }
+  // Save previous
+  State.previousDeals = State.deals;
+  State.prevUpdate = State.lastUpdate;
+  State.deals = deals;
+  State.lastUpdate = new Date().toISOString();
+  saveState();
+  updateTopbarInfo();
+  navigate('dashboard');
+}
+
+// Handle Excel files (often HTML with .xls extension)
+function handleExcelFile(file){
+  if(file.name.endsWith('.xlsx')){
+    alert('XLSX-файлы не поддерживаются напрямую. Сохраните файл как CSV в Excel: Файл → Сохранить как → CSV (разделитель — точка с запятой).');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    try{
+      const text = e.target.result;
+      if(text.includes('<table') || text.includes('<Table')){
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(text, 'text/html');
+        const tables = doc.querySelectorAll('table');
+        if(tables.length){
+          const table = tables[0];
+          const rows = table.querySelectorAll('tr');
+          if(rows.length > 1){
+            const headers = Array.from(rows[0].querySelectorAll('td,th')).map(c=>c.textContent.trim());
+            const dataRows = Array.from(rows).slice(1).map(r=>{
+              const cells = Array.from(r.querySelectorAll('td,th')).map(c=>c.textContent.trim());
+              const obj = {};
+              headers.forEach((h,i)=> obj[h] = cells[i] || '');
+              return obj;
+            });
+            const deals = processDeals(dataRows);
+            if(deals.length){
+              State.previousDeals = State.deals;
+              State.prevUpdate = State.lastUpdate;
+              State.deals = deals;
+              State.lastUpdate = new Date().toISOString();
+              saveState();
+              updateTopbarInfo();
+              navigate('dashboard');
+              return;
+            }
+          }
+        }
+      }
+      // Fallback: try as CSV
+      processCSVText(text);
+    }catch(err){
+      alert('Ошибка при обработке файла: ' + err.message + '\n\nПопробуйте сохранить как CSV и загрузить снова.');
+    }
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+// ============================================================
+// EXPORT / IMPORT
+// ============================================================
+function exportState(){
+  const data = JSON.stringify(State, null, 2);
+  const blob = new Blob([data], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `dashboard-backup-${new Date().toISOString().substring(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importState(file){
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    try{
+      const data = JSON.parse(e.target.result);
+      State = {...State, ...data};
+      saveState();
+      updateTopbarInfo();
+      navigate('dashboard');
+    }catch(err){
+      alert('Ошибка при импорте: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+// ============================================================
+// TOPBAR
+// ============================================================
+function updateTopbarInfo(){
+  const footer = document.getElementById('sidebarFooter');
+  if(State.deals.length){
+    const date = State.lastUpdate ? formatDate(State.lastUpdate) : '';
+    document.getElementById('topbarInfo').textContent = `${State.deals.length} сделок • обновлено ${date}`;
+    footer.innerHTML = `<span class="status-dot" style="background:var(--success)"></span> ${State.deals.length} сделок • ${date}`;
+  } else {
+    document.getElementById('topbarInfo').textContent = '';
+    footer.innerHTML = '<span class="status-dot" style="background:var(--danger)"></span> Нет данных. Загрузите CSV.';
+  }
+}
+
+// ============================================================
+// INIT
+// ============================================================
+function init(){
+  loadState();
+  updateTopbarInfo();
+
+  // Navigation
+  document.querySelectorAll('.nav-item').forEach(el=>{
+    el.addEventListener('click', ()=> navigate(el.dataset.view));
+  });
+
+  // CSV upload
+  document.getElementById('csvFile').addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    if(file.name.endsWith('.xls') || file.name.endsWith('.xlsx')){
+      handleExcelFile(file);
+    } else {
+      handleCSVFile(file);
+    }
+    e.target.value = '';
+  });
+
+  // Import
+  document.getElementById('importFile').addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    if(file) importState(file);
+    e.target.value = '';
+  });
+
+  // Drag and drop
+  const uploadZone = document.querySelector('.upload-zone');
+  // Initial render
+  renderDashboard();
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
