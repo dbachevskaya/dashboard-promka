@@ -1079,8 +1079,6 @@ function getLeadDealConversionData(periodType, target){
   // Sort periods ascending
   return Object.values(groups).sort((a,b)=>a.period.localeCompare(b.period));
 }
-  return [...new Set(State.deals.map(d=>d.source).filter(s=>s))].sort();
-}
 
 function getCategories(){
   return [...new Set(State.deals.map(d=>d.category).filter(c=>c))].sort();
@@ -1650,7 +1648,6 @@ function renderLeadDealConversion(){
     return { ...g, conv, wonConv, lostPct };
   });
   // Color for conversion
-  const convColor = p => p >= 50 ? 'var(--success)' : p >= 25 ? 'var(--warning)' : 'var(--danger)';
 
   let html = '<table>';
   html += '<thead><tr><th>Период</th><th>Лидов</th><th>Сумма, ₽</th><th>До ' + targetLabel + '</th><th>Из них запущено</th><th>Потеряно</th><th>В работе</th><th>Конверсия в ' + (target==='won'?'запуск':'сделку') + '</th><th>Визуально</th></tr></thead><tbody>';
