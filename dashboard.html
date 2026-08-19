@@ -317,6 +317,23 @@ input[type="file"]{display:none}
           <div id="conversionTable"></div>
         </div>
         <div class="card">
+          <div class="card-title">
+            Конверсия «Лид → Сделка» по периодам
+            <span class="flex gap-4" style="margin-left:auto">
+              <select id="convPeriodType" onchange="renderLeadDealConversion()">
+                <option value="month">По месяцам</option>
+                <option value="quarter">По кварталам</option>
+              </select>
+              <select id="convTarget" onchange="renderLeadDealConversion()">
+                <option value="deal">До Договора</option>
+                <option value="won">До Запуска (оплачено)</option>
+              </select>
+            </span>
+          </div>
+          <p class="small muted mb-12">Сделки группируются по дате создания лида. <b>До Договора</b> — сделки, достигшие стадии «Договор» и далее. <b>До Запуска</b> — достигшие стадии «Запуск» и далее (реально оплаченные).</p>
+          <div id="leadDealConversion"></div>
+        </div>
+        <div class="card">
           <div class="card-title">Сделки по стадиям <span class="badge" id="funnelDealsBadge"></span></div>
           <div class="sub-tabs" id="funnelStageTabs"></div>
           <div class="table-wrap">
@@ -1032,6 +1049,39 @@ function getSources(){
   return [...new Set(State.deals.map(d=>d.source).filter(s=>s))].sort();
 }
 
+function getLeadDealConversionData(periodType, target){
+  // Target stage index: deal = Договор (5), won = Запуск (6)
+  const targetIdx = target === 'won' ? 6 : 5;
+  const groups = {};
+  State.deals.forEach(d=>{
+    // Use creation date as cohort key
+    let key = '';
+    if(periodType === 'quarter'){
+      const dt = d.createdDate ? new Date(d.createdDate) : null;
+      if(!dt) return;
+      const q = Math.ceil((dt.getMonth()+1)/3);
+      key = dt.getFullYear() + '-Q' + q;
+    } else {
+      const dt = d.createdDate ? new Date(d.createdDate) : null;
+      if(!dt) return;
+      key = dt.toISOString().substring(0,7);
+    }
+    if(!groups[key]) groups[key] = { period:key, total:0, reached:0, won:0, lost:0, inPipeline:0, amount:0, reachedSum:0 };
+    const g = groups[key];
+    g.total++;
+    g.amount += d.amount||0;
+    const idx = STAGE_INDEX[d.stage];
+    if(idx >= targetIdx){ g.reached++; g.reachedSum += d.amount||0; }
+    if(idx >= 6){ g.won++; }
+    if(idx === 10 || idx === 11){ g.lost++; }
+    if(idx >= 0 && idx < targetIdx){ g.inPipeline++; }
+  });
+  // Sort periods ascending
+  return Object.values(groups).sort((a,b)=>a.period.localeCompare(b.period));
+}
+  return [...new Set(State.deals.map(d=>d.source).filter(s=>s))].sort();
+}
+
 function getCategories(){
   return [...new Set(State.deals.map(d=>d.category).filter(c=>c))].sort();
 }
@@ -1538,6 +1588,7 @@ function renderFunnel(){
     funnelActiveStage = first ? first.id : null;
   }
   renderFunnelDeals(filter);
+  renderLeadDealConversion();
 }
 
 function setFunnelStage(stageId){
@@ -1579,6 +1630,63 @@ function renderFunnelDeals(filter){
     </table>
   ` : '<p class="muted center">Нет сделок на этой стадии</p>';
   document.getElementById('funnelDealsTable').innerHTML = html;
+}
+
+function renderLeadDealConversion(){
+  const periodType = document.getElementById('convPeriodType').value;
+  const target = document.getElementById('convTarget').value;
+  const targetLabel = target === 'won' ? 'Запуск (оплачено)' : 'Договор';
+  const data = getLeadDealConversionData(periodType, target);
+  const el = document.getElementById('leadDealConversion');
+  if(!data.length){
+    el.innerHTML = '<p class="muted center">Нет данных. Убедитесь, что у сделок заполнена дата создания.</p>';
+    return;
+  }
+  // Total for last 12 months/quarters (for recent rate)
+  const convData = data.map(g=>{
+    const conv = g.total > 0 ? (g.reached / g.total * 100) : 0;
+    const wonConv = g.total > 0 ? (g.won / g.total * 100) : 0;
+    const lostPct = g.total > 0 ? (g.lost / g.total * 100) : 0;
+    return { ...g, conv, wonConv, lostPct };
+  });
+  // Color for conversion
+  const convColor = p => p >= 50 ? 'var(--success)' : p >= 25 ? 'var(--warning)' : 'var(--danger)';
+
+  let html = '<table>';
+  html += '<thead><tr><th>Период</th><th>Лидов</th><th>Сумма, ₽</th><th>До ' + targetLabel + '</th><th>Из них запущено</th><th>Потеряно</th><th>В работе</th><th>Конверсия в ' + (target==='won'?'запуск':'сделку') + '</th><th>Визуально</th></tr></thead><tbody>';
+
+  convData.forEach((c)=>{
+    const reachedLabel = c.reached;
+    const sumLabel = fmtRub(c.reachedSum);
+    const convPct = c.conv;
+    const rowColor = convColor(c.conv);
+    const lostCls = c.lostPct >= 40 ? 'bad' : c.lostPct >= 20 ? 'mid' : 'good';
+    html += '<tr>'
+      + '<td class="bold">' + formatPeriod(c.period, periodType) + '</td>'
+      + '<td>' + c.total + '</td>'
+      + '<td class="right muted">' + fmtRub(c.amount) + '</td>'
+      + '<td class="bold" style="color:var(--success)">' + c.reached + '</td>'
+      + '<td>' + c.won + '</td>'
+      + '<td class="bold" style="color:var(--danger)">' + c.lost + '</td>'
+      + '<td>' + c.inPipeline + '</td>'
+      + '<td><span class="funnel-conversion ' + (c.conv >= 50 ? 'good' : c.conv >= 25 ? 'mid' : 'bad') + '">' + fmtPct(c.conv) + '</span></td>'
+      + '<td style="width:160px"><div style="width:150px;height:10px;background:var(--bg);border-radius:5px;overflow:hidden;position:relative"><div style="height:100%;width:' + c.conv + '%;background:' + convColor(c.conv) + ';border-radius:5px"></div><div style="position:absolute;left:0;top:0;bottom:0;width:100%;border-left:' + c.lostPct + '%;opacity:0"></div></div><div class="small muted">потеряно ' + fmtPct(c.lostPct) + '</div></td>'
+      + '</tr>';
+  });
+  html += '</tbody></table>';
+  html += '<p class="small muted mt-12">Внимание: лиды, созданные в последних периодах, ещё находятся в воронке, поэтому их конверсия будет занижена. Наибольшую точность дают завершённые периоды. Конверсия считается от всех лидов периода, включая ещё находящиеся в работе.</p>';
+  el.innerHTML = html;
+}
+
+function formatPeriod(period, type){
+  if(type === 'quarter') return period.replace('-Q', ' кв ');
+  return formatMonth(period);
+}
+
+function convColor(p){
+  if(p >= 50) return '#10b981';
+  if(p >= 25) return '#f59e0b';
+  return '#ef4444';
 }
 
 // ============================================================
